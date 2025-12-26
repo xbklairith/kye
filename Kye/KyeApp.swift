@@ -62,7 +62,7 @@ struct KyeApp: App {
                 Image(systemName: "keyboard")
             case .waitingForPermission:
                 Image(systemName: "keyboard.badge.exclamationmark")
-            case .error:
+            case .error(_):
                 Image(systemName: "keyboard.badge.exclamationmark")
             case .initializing:
                 Image(systemName: "keyboard")

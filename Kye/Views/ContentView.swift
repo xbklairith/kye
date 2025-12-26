@@ -80,7 +80,7 @@ struct MenuBarContentView: View {
             case .waitingForPermission:
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.yellow)
-            case .error:
+            case .error(_):
                 Image(systemName: "xmark.circle.fill")
                     .foregroundColor(.red)
             case .initializing:
@@ -99,7 +99,7 @@ struct MenuBarContentView: View {
             return "Disabled"
         case .waitingForPermission:
             return "Permission Required"
-        case .error:
+        case .error(_):
             return "Error"
         case .initializing:
             return "Starting..."
