@@ -311,23 +311,7 @@ struct AboutView: View {
     }
 }
 
-#Preview {
-    SettingsView(appController: createPreviewAppController())
-}
-
-private func createPreviewAppController() -> AppController {
-    let keyMapper = KeyMapper()
-    let modifierHandler = ModifierHandler()
-    let mockPermission = MockPermissionManager()
-    let mockEventTap = MockEventTapManager()
-    let ruleEngine = RuleEngine(keyMapper: keyMapper, modifierHandler: modifierHandler)
-    let configManager = ConfigurationManager(keyMapper: keyMapper)
-
-    return AppController(
-        permissionManager: mockPermission,
-        configManager: configManager,
-        eventTapManager: mockEventTap,
-        ruleEngine: ruleEngine,
-        keyMapper: keyMapper
-    )
-}
+// Preview disabled - requires mock objects from test target
+// #Preview {
+//     SettingsView(appController: ...)
+// }
