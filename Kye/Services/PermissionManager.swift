@@ -79,15 +79,24 @@ final class PermissionManager: PermissionManaging {
         // Check immediately
         _ = checkPermission()
 
-        // Start polling for changes
-        pollingTimer = Timer.scheduledTimer(withTimeInterval: pollingInterval, repeats: true) { [weak self] _ in
-            self?.pollPermissionStatus()
+        // Start polling for changes on main thread
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.pollingTimer = Timer.scheduledTimer(withTimeInterval: self.pollingInterval, repeats: true) { [weak self] _ in
+                self?.pollPermissionStatus()
+            }
+            // Ensure timer runs in common modes (including when menus are open)
+            if let timer = self.pollingTimer {
+                RunLoop.main.add(timer, forMode: .common)
+            }
         }
     }
 
     func stopMonitoring() {
-        pollingTimer?.invalidate()
-        pollingTimer = nil
+        DispatchQueue.main.async { [weak self] in
+            self?.pollingTimer?.invalidate()
+            self?.pollingTimer = nil
+        }
         logger?.info("Stopped permission monitoring", category: .permission)
     }
 
