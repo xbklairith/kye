@@ -248,10 +248,27 @@ final class AppController: AppControlling, ObservableObject {
 
     private func handleModifierChange(keyCode: CGKeyCode, flags: CGEventFlags) {
         // Track trigger key held state
-        // For simplicity, detect if the key was pressed or released based on flags
         let isKeyDown = isModifierKeyPressed(keyCode: keyCode, flags: flags)
         ruleEngine.setTriggerKeyHeld(isKeyDown, keyCode: keyCode)
         debugLog("Modifier change: keyCode=\(keyCode) isKeyDown=\(isKeyDown)")
+
+        // Also check if this modifier is remapped by a basic rule
+        // If Right Option is remapped to Right Command, also track Right Command as held
+        for rule in ruleEngine.rules {
+            if case .basic(let basicRule) = rule, basicRule.enabled {
+                if let fromCode = keyMapper.keyCode(for: basicRule.from),
+                   let toCode = keyMapper.keyCode(for: basicRule.to),
+                   fromCode == keyCode {
+                    // This modifier is remapped - also track the target modifier
+                    ruleEngine.setTriggerKeyHeld(isKeyDown, keyCode: toCode)
+                    if isKeyDown {
+                        // Track which physical key is remapped to this target
+                        ruleEngine.setRemappedTrigger(physicalKeyCode: fromCode, targetKeyCode: toCode)
+                    }
+                    debugLog("Modifier remap: also setting keyCode=\(toCode) isKeyDown=\(isKeyDown)")
+                }
+            }
+        }
     }
 
     private func isModifierKeyPressed(keyCode: CGKeyCode, flags: CGEventFlags) -> Bool {

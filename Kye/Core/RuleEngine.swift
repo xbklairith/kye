@@ -31,6 +31,9 @@ final class RuleEngine: RuleEngineProtocol {
     /// Tracks which trigger keys are currently held
     private var heldTriggerKeys: Set<CGKeyCode> = []
 
+    /// Tracks which physical keys are remapped to which target keys (for modifier stripping)
+    private var remappedTriggerKeys: [CGKeyCode: CGKeyCode] = [:]  // target -> physical
+
     init(keyMapper: KeyMapping, modifierHandler: ModifierHandling) {
         self.keyMapper = keyMapper
         self.modifierHandler = modifierHandler
@@ -58,7 +61,13 @@ final class RuleEngine: RuleEngineProtocol {
             heldTriggerKeys.insert(keyCode)
         } else {
             heldTriggerKeys.remove(keyCode)
+            remappedTriggerKeys.removeValue(forKey: keyCode)
         }
+    }
+
+    /// Track that a physical key is being remapped to a target key
+    func setRemappedTrigger(physicalKeyCode: CGKeyCode, targetKeyCode: CGKeyCode) {
+        remappedTriggerKeys[targetKeyCode] = physicalKeyCode
     }
 
     // MARK: - Private Methods
@@ -122,10 +131,17 @@ final class RuleEngine: RuleEngineProtocol {
         }
 
         // Strip the trigger modifier from the flags
-        let triggerModifierType = modifierHandler.getModifierType(triggerKeyCode)
         var newFlags = flags
-        if let modType = triggerModifierType {
-            newFlags = modifierHandler.stripModifier(flags, modifier: modType)
+
+        // Strip the trigger key's modifier
+        if let modType = modifierHandler.getModifierType(triggerKeyCode) {
+            newFlags = modifierHandler.stripModifier(newFlags, modifier: modType)
+        }
+
+        // Also strip the physical key's modifier if it was remapped
+        if let physicalKeyCode = remappedTriggerKeys[triggerKeyCode],
+           let physicalModType = modifierHandler.getModifierType(physicalKeyCode) {
+            newFlags = modifierHandler.stripModifier(newFlags, modifier: physicalModType)
         }
 
         return .transformed(keyCode: targetKeyCode, flags: newFlags)
