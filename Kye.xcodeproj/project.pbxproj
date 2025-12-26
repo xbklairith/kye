@@ -16,11 +16,13 @@
 		A1000007 /* AppError.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009 /* AppError.swift */; };
 		A1000008 /* KeyMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000010 /* KeyMapper.swift */; };
 		A1000009 /* ModifierHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000011 /* ModifierHandler.swift */; };
+		A1000010 /* RuleEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000012 /* RuleEngine.swift */; };
 		B1000001 /* KyeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000001 /* KyeTests.swift */; };
 		B1000002 /* ConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000002 /* ConfigurationTests.swift */; };
 		B1000003 /* AppErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000003 /* AppErrorTests.swift */; };
 		B1000004 /* KeyMapperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000004 /* KeyMapperTests.swift */; };
 		B1000005 /* ModifierHandlerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000005 /* ModifierHandlerTests.swift */; };
+		B1000006 /* RuleEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000006 /* RuleEngineTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,12 +47,14 @@
 		A2000009 /* AppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppError.swift; sourceTree = "<group>"; };
 		A2000010 /* KeyMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyMapper.swift; sourceTree = "<group>"; };
 		A2000011 /* ModifierHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModifierHandler.swift; sourceTree = "<group>"; };
+		A2000012 /* RuleEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleEngine.swift; sourceTree = "<group>"; };
 		A3000001 /* Kye.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Kye.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B2000001 /* KyeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KyeTests.swift; sourceTree = "<group>"; };
 		B2000002 /* ConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationTests.swift; sourceTree = "<group>"; };
 		B2000003 /* AppErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppErrorTests.swift; sourceTree = "<group>"; };
 		B2000004 /* KeyMapperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyMapperTests.swift; sourceTree = "<group>"; };
 		B2000005 /* ModifierHandlerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModifierHandlerTests.swift; sourceTree = "<group>"; };
+		B2000006 /* RuleEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleEngineTests.swift; sourceTree = "<group>"; };
 		B3000001 /* KyeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KyeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -119,6 +123,7 @@
 			children = (
 				A2000010 /* KeyMapper.swift */,
 				A2000011 /* ModifierHandler.swift */,
+				A2000012 /* RuleEngine.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -156,6 +161,7 @@
 				B2000003 /* AppErrorTests.swift */,
 				B2000004 /* KeyMapperTests.swift */,
 				B2000005 /* ModifierHandlerTests.swift */,
+				B2000006 /* RuleEngineTests.swift */,
 			);
 			path = KyeTests;
 			sourceTree = "<group>";
@@ -267,6 +273,7 @@
 				A1000007 /* AppError.swift in Sources */,
 				A1000008 /* KeyMapper.swift in Sources */,
 				A1000009 /* ModifierHandler.swift in Sources */,
+				A1000010 /* RuleEngine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -279,6 +286,7 @@
 				B1000003 /* AppErrorTests.swift in Sources */,
 				B1000004 /* KeyMapperTests.swift in Sources */,
 				B1000005 /* ModifierHandlerTests.swift in Sources */,
+				B1000006 /* RuleEngineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
