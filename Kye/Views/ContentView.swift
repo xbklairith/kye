@@ -1,5 +1,128 @@
 import SwiftUI
 
+struct MenuBarContentView: View {
+    @ObservedObject var appController: AppController
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            // Status indicator
+            statusSection
+
+            Divider()
+
+            // Enable/Disable toggle
+            Button(appController.isEnabled ? "Disable" : "Enable") {
+                if appController.state == .waitingForPermission {
+                    PermissionManager().requestPermission()
+                } else {
+                    appController.toggleEnabled()
+                }
+            }
+            .keyboardShortcut("e", modifiers: .command)
+
+            // Reload configuration
+            Button("Reload Configuration") {
+                try? appController.reloadConfiguration()
+            }
+            .keyboardShortcut("r", modifiers: .command)
+
+            Divider()
+
+            // Settings
+            Button("Settings...") {
+                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            }
+            .keyboardShortcut(",", modifiers: .command)
+
+            Divider()
+
+            // Quit
+            Button("Quit Kye") {
+                appController.stop()
+                NSApplication.shared.terminate(nil)
+            }
+            .keyboardShortcut("q", modifiers: .command)
+        }
+        .padding(.vertical, 4)
+        .task {
+            // Start the app controller when menu appears
+            if appController.state == .initializing {
+                try? await appController.start()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var statusSection: some View {
+        HStack {
+            statusIcon
+            VStack(alignment: .leading, spacing: 2) {
+                Text(statusTitle)
+                    .font(.headline)
+                Text(statusMessage)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+    }
+
+    private var statusIcon: some View {
+        Group {
+            switch appController.state {
+            case .running:
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+            case .disabled:
+                Image(systemName: "pause.circle.fill")
+                    .foregroundColor(.orange)
+            case .waitingForPermission:
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.yellow)
+            case .error:
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.red)
+            case .initializing:
+                Image(systemName: "circle.dotted")
+                    .foregroundColor(.gray)
+            }
+        }
+        .font(.title2)
+    }
+
+    private var statusTitle: String {
+        switch appController.state {
+        case .running:
+            return "Active"
+        case .disabled:
+            return "Disabled"
+        case .waitingForPermission:
+            return "Permission Required"
+        case .error:
+            return "Error"
+        case .initializing:
+            return "Starting..."
+        }
+    }
+
+    private var statusMessage: String {
+        switch appController.state {
+        case .running:
+            return "Key remapping is active"
+        case .disabled:
+            return "Key remapping is paused"
+        case .waitingForPermission:
+            return "Grant Accessibility access"
+        case .error(let message):
+            return message
+        case .initializing:
+            return "Initializing services"
+        }
+    }
+}
+
+// Keep ContentView for backwards compatibility and previews
 struct ContentView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
