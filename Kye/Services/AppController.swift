@@ -37,7 +37,7 @@ final class AppController: AppControlling, ObservableObject {
     private let permissionManager: PermissionManaging
     private let configManager: ConfigurationManaging
     private let eventTapManager: EventTapManaging
-    private let ruleEngine: RuleEngineProtocol
+    private var ruleEngine: RuleEngineProtocol
     private let keyMapper: KeyMapping
     private let logger: Logging?
 
@@ -176,9 +176,7 @@ final class AppController: AppControlling, ObservableObject {
     }
 
     private func loadRulesIntoEngine(_ config: Configuration) {
-        var engine = ruleEngine
-        engine.rules = config.rules
-
+        ruleEngine.rules = config.rules
         logger?.info("Loaded \(config.rules.count) rules into engine", category: .configuration)
     }
 

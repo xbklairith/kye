@@ -35,18 +35,15 @@ struct GeneralSettingsView: View {
     @State private var showError = false
     @State private var errorMessage = ""
 
-    private let launchManager: LaunchAtLoginManager? = {
-        if #available(macOS 13.0, *) {
-            return LaunchAtLoginManager()
-        }
-        return nil
-    }()
+    private var launchManager: LaunchAtLoginManager {
+        LaunchAtLoginManager()
+    }
 
     var body: some View {
         Form {
             Section {
                 Toggle("Launch at login", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, newValue in
+                    .onChange(of: launchAtLogin) { newValue in
                         updateLaunchAtLogin(enabled: newValue)
                     }
 
@@ -81,19 +78,16 @@ struct GeneralSettingsView: View {
     }
 
     private func loadLaunchAtLoginStatus() {
-        guard let manager = launchManager else { return }
-        let status = manager.checkStatus()
+        let status = launchManager.checkStatus()
         launchAtLogin = status == .enabled
     }
 
     private func updateLaunchAtLogin(enabled: Bool) {
-        guard let manager = launchManager else { return }
-
         do {
             if enabled {
-                try manager.register()
+                try launchManager.register()
             } else {
-                try manager.unregister()
+                try launchManager.unregister()
             }
         } catch {
             errorMessage = error.localizedDescription

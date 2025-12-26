@@ -4,7 +4,7 @@ import AppKit
 @main
 struct KyeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var appController = createAppController()
+    @StateObject private var appController: AppController
 
     init() {
         // Check for existing instance (REQ-052)
@@ -17,6 +17,27 @@ struct KyeApp: App {
             // Terminate this instance
             NSApplication.shared.terminate(nil)
         }
+
+        // Initialize AppController
+        let keyMapper = KeyMapper()
+        let modifierHandler = ModifierHandler()
+        let logger = LoggerService()
+
+        let permissionManager = PermissionManager(logger: logger)
+        let configManager = ConfigurationManager(keyMapper: keyMapper, logger: logger)
+        let eventTapManager = EventTapManager()
+        let ruleEngine = RuleEngine(keyMapper: keyMapper, modifierHandler: modifierHandler)
+
+        let controller = AppController(
+            permissionManager: permissionManager,
+            configManager: configManager,
+            eventTapManager: eventTapManager,
+            ruleEngine: ruleEngine,
+            keyMapper: keyMapper,
+            logger: logger
+        )
+
+        _appController = StateObject(wrappedValue: controller)
     }
 
     var body: some Scene {
@@ -48,26 +69,6 @@ struct KyeApp: App {
             }
         }
     }
-}
-
-private func createAppController() -> AppController {
-    let keyMapper = KeyMapper()
-    let modifierHandler = ModifierHandler()
-    let logger = LoggerService()
-
-    let permissionManager = PermissionManager(logger: logger)
-    let configManager = ConfigurationManager(keyMapper: keyMapper, logger: logger)
-    let eventTapManager = EventTapManager()
-    let ruleEngine = RuleEngine(keyMapper: keyMapper, modifierHandler: modifierHandler)
-
-    return AppController(
-        permissionManager: permissionManager,
-        configManager: configManager,
-        eventTapManager: eventTapManager,
-        ruleEngine: ruleEngine,
-        keyMapper: keyMapper,
-        logger: logger
-    )
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
