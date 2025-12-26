@@ -24,12 +24,12 @@ struct Configuration: Codable, Equatable {
                 from: "right_option",
                 to: "right_command"
             )),
-            // Right Command + HJKL → Arrow Keys (Vim navigation layer)
+            // Right Option + HJKL → Arrow Keys (Vim navigation layer)
             .layer(LayerRule(
                 id: "vim-navigation",
-                description: "Vim-style navigation with Right Command",
+                description: "Vim-style navigation with Right Option",
                 enabled: true,
-                trigger: "right_command",
+                trigger: "right_option",
                 mappings: [
                     "h": "left_arrow",
                     "j": "down_arrow",

@@ -61,11 +61,14 @@ final class AppController: AppControlling, ObservableObject {
 
     func start() async throws {
         logger?.info("Starting Kye app controller", category: .app)
+        debugLog("START: Beginning app controller startup")
 
         // Step 1: Check permissions
         let permissionStatus = permissionManager.checkPermission()
+        debugLog("Permission status: \(permissionStatus)")
         if permissionStatus != .granted {
             logger?.warning("Accessibility permission not granted", category: .permission)
+            debugLog("Permission NOT granted, waiting...")
             state = .waitingForPermission
             permissionManager.startMonitoring()
             return
@@ -94,10 +97,12 @@ final class AppController: AppControlling, ObservableObject {
 
         // Step 3: Start event tap
         do {
+            debugLog("Starting event tap...")
             try eventTapManager.start()
             isEnabled = true
             state = .running
             logger?.info("Kye is now active", category: .app)
+            debugLog("Event tap started successfully! isEnabled=\(isEnabled)")
         } catch {
             logger?.error("Failed to start event tap: \(error)", category: .eventTap)
             state = .error("Failed to start keyboard interception")
@@ -178,6 +183,27 @@ final class AppController: AppControlling, ObservableObject {
     private func loadRulesIntoEngine(_ config: Configuration) {
         ruleEngine.rules = config.rules
         logger?.info("Loaded \(config.rules.count) rules into engine", category: .configuration)
+        debugLog("Loaded \(config.rules.count) rules into engine")
+        for rule in config.rules {
+            debugLog("Rule: \(rule)")
+        }
+    }
+
+    private func debugLog(_ message: String) {
+        let logFile = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("kye_debug.log")
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let line = "[\(timestamp)] \(message)\n"
+        if let data = line.data(using: .utf8) {
+            if FileManager.default.fileExists(atPath: logFile.path) {
+                if let handle = try? FileHandle(forWritingTo: logFile) {
+                    handle.seekToEndOfFile()
+                    handle.write(data)
+                    handle.closeFile()
+                }
+            } else {
+                try? data.write(to: logFile)
+            }
+        }
     }
 
     private func processEvent(_ event: CGEvent, type: CGEventType) -> CGEvent? {
@@ -193,6 +219,9 @@ final class AppController: AppControlling, ObservableObject {
         let keyCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
         let flags = event.flags
 
+        // Debug logging
+        debugLog("Event: type=\(type.rawValue) keyCode=\(keyCode) flags=\(flags.rawValue)")
+
         // Handle modifier key state tracking
         if type == .flagsChanged {
             handleModifierChange(keyCode: keyCode, flags: flags)
@@ -201,6 +230,7 @@ final class AppController: AppControlling, ObservableObject {
 
         // Evaluate rules
         let result = ruleEngine.evaluate(keyCode: keyCode, flags: flags)
+        debugLog("Rule result: \(result)")
 
         switch result {
         case .passthrough:
@@ -221,6 +251,7 @@ final class AppController: AppControlling, ObservableObject {
         // For simplicity, detect if the key was pressed or released based on flags
         let isKeyDown = isModifierKeyPressed(keyCode: keyCode, flags: flags)
         ruleEngine.setTriggerKeyHeld(isKeyDown, keyCode: keyCode)
+        debugLog("Modifier change: keyCode=\(keyCode) isKeyDown=\(isKeyDown)")
     }
 
     private func isModifierKeyPressed(keyCode: CGKeyCode, flags: CGEventFlags) -> Bool {
