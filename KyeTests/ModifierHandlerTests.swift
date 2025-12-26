@@ -239,4 +239,91 @@ final class ModifierHandlerTests: XCTestCase {
         XCTAssertTrue(handler.isRightModifier(0x36))
         XCTAssertNotNil(handler.getModifierType(0x36))
     }
+
+    // MARK: - Strip Modifier By Key Code Tests (Left/Right preservation)
+
+    func testStripRightOptionPreservesLeftOption() {
+        // Both Left Option (device flag 0x20) and Right Option (device flag 0x40) pressed
+        // Plus the main maskAlternate flag
+        let deviceLeftOption: UInt64 = 0x00000020
+        let deviceRightOption: UInt64 = 0x00000040
+        let flags = CGEventFlags(rawValue: CGEventFlags.maskAlternate.rawValue | deviceLeftOption | deviceRightOption)
+
+        let result = modifierHandler.stripModifierByKeyCode(flags, keyCode: 0x3D)  // Right Option
+
+        // Left Option device flag should remain, main mask should remain (left is still pressed)
+        XCTAssertTrue(result.rawValue & deviceLeftOption != 0, "Left Option device flag should be preserved")
+        XCTAssertTrue(result.contains(.maskAlternate), "maskAlternate should remain because Left Option is pressed")
+        XCTAssertFalse(result.rawValue & deviceRightOption != 0, "Right Option device flag should be stripped")
+    }
+
+    func testStripRightOptionRemovesMaskWhenLeftNotPressed() {
+        // Only Right Option pressed
+        let deviceRightOption: UInt64 = 0x00000040
+        let flags = CGEventFlags(rawValue: CGEventFlags.maskAlternate.rawValue | deviceRightOption)
+
+        let result = modifierHandler.stripModifierByKeyCode(flags, keyCode: 0x3D)  // Right Option
+
+        XCTAssertFalse(result.contains(.maskAlternate), "maskAlternate should be removed when only Right Option was pressed")
+        XCTAssertFalse(result.rawValue & deviceRightOption != 0, "Right Option device flag should be stripped")
+    }
+
+    func testStripRightCommandPreservesLeftCommand() {
+        let deviceLeftCommand: UInt64 = 0x00000008
+        let deviceRightCommand: UInt64 = 0x00000010
+        let flags = CGEventFlags(rawValue: CGEventFlags.maskCommand.rawValue | deviceLeftCommand | deviceRightCommand)
+
+        let result = modifierHandler.stripModifierByKeyCode(flags, keyCode: 0x36)  // Right Command
+
+        XCTAssertTrue(result.rawValue & deviceLeftCommand != 0, "Left Command device flag should be preserved")
+        XCTAssertTrue(result.contains(.maskCommand), "maskCommand should remain because Left Command is pressed")
+        XCTAssertFalse(result.rawValue & deviceRightCommand != 0, "Right Command device flag should be stripped")
+    }
+
+    func testStripRightControlPreservesLeftControl() {
+        let deviceLeftControl: UInt64 = 0x00000001
+        let deviceRightControl: UInt64 = 0x00002000
+        let flags = CGEventFlags(rawValue: CGEventFlags.maskControl.rawValue | deviceLeftControl | deviceRightControl)
+
+        let result = modifierHandler.stripModifierByKeyCode(flags, keyCode: 0x3E)  // Right Control
+
+        XCTAssertTrue(result.rawValue & deviceLeftControl != 0, "Left Control device flag should be preserved")
+        XCTAssertTrue(result.contains(.maskControl), "maskControl should remain because Left Control is pressed")
+        XCTAssertFalse(result.rawValue & deviceRightControl != 0, "Right Control device flag should be stripped")
+    }
+
+    func testStripRightShiftPreservesLeftShift() {
+        let deviceLeftShift: UInt64 = 0x00000002
+        let deviceRightShift: UInt64 = 0x00000004
+        let flags = CGEventFlags(rawValue: CGEventFlags.maskShift.rawValue | deviceLeftShift | deviceRightShift)
+
+        let result = modifierHandler.stripModifierByKeyCode(flags, keyCode: 0x3C)  // Right Shift
+
+        XCTAssertTrue(result.rawValue & deviceLeftShift != 0, "Left Shift device flag should be preserved")
+        XCTAssertTrue(result.contains(.maskShift), "maskShift should remain because Left Shift is pressed")
+        XCTAssertFalse(result.rawValue & deviceRightShift != 0, "Right Shift device flag should be stripped")
+    }
+
+    func testStripModifierByKeyCodePreservesUnrelatedModifiers() {
+        // Right Option + Left Control pressed
+        let deviceRightOption: UInt64 = 0x00000040
+        let deviceLeftControl: UInt64 = 0x00000001
+        let flags = CGEventFlags(rawValue: CGEventFlags.maskAlternate.rawValue | CGEventFlags.maskControl.rawValue | deviceRightOption | deviceLeftControl)
+
+        let result = modifierHandler.stripModifierByKeyCode(flags, keyCode: 0x3D)  // Strip Right Option
+
+        // Control should be completely untouched
+        XCTAssertTrue(result.contains(.maskControl), "Control mask should be preserved")
+        XCTAssertTrue(result.rawValue & deviceLeftControl != 0, "Left Control device flag should be preserved")
+        // Option should be stripped
+        XCTAssertFalse(result.contains(.maskAlternate), "Option mask should be stripped")
+    }
+
+    func testStripNonModifierKeyCodeReturnsUnchangedFlags() {
+        let flags = CGEventFlags([.maskCommand, .maskShift])
+
+        let result = modifierHandler.stripModifierByKeyCode(flags, keyCode: 0x04)  // H key (not a modifier)
+
+        XCTAssertEqual(result, flags, "Flags should be unchanged for non-modifier key code")
+    }
 }

@@ -39,6 +39,23 @@ final class RuleEngine: RuleEngineProtocol {
         self.modifierHandler = modifierHandler
     }
 
+    private func debugLog(_ message: String) {
+        let logFile = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("kye_debug.log")
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let line = "[\(timestamp)] \(message)\n"
+        if let data = line.data(using: .utf8) {
+            if FileManager.default.fileExists(atPath: logFile.path) {
+                if let handle = try? FileHandle(forWritingTo: logFile) {
+                    handle.seekToEndOfFile()
+                    handle.write(data)
+                    handle.closeFile()
+                }
+            } else {
+                try? data.write(to: logFile)
+            }
+        }
+    }
+
     func evaluate(keyCode: CGKeyCode, flags: CGEventFlags) -> RuleResult {
         for rule in rules {
             switch rule {
@@ -130,18 +147,19 @@ final class RuleEngine: RuleEngineProtocol {
             return nil
         }
 
-        // Strip the trigger modifier from the flags
+        // Strip the trigger modifier from the flags (only the specific key, not both sides)
         var newFlags = flags
 
-        // Strip the trigger key's modifier
-        if let modType = modifierHandler.getModifierType(triggerKeyCode) {
-            newFlags = modifierHandler.stripModifier(newFlags, modifier: modType)
-        }
+        debugLog("Layer: before strip flags=\(String(format: "0x%016llX", flags.rawValue))")
+
+        // Strip the trigger key's modifier by specific key code
+        newFlags = modifierHandler.stripModifierByKeyCode(newFlags, keyCode: triggerKeyCode)
+        debugLog("Layer: after strip trigger(\(triggerKeyCode)) flags=\(String(format: "0x%016llX", newFlags.rawValue))")
 
         // Also strip the physical key's modifier if it was remapped
-        if let physicalKeyCode = remappedTriggerKeys[triggerKeyCode],
-           let physicalModType = modifierHandler.getModifierType(physicalKeyCode) {
-            newFlags = modifierHandler.stripModifier(newFlags, modifier: physicalModType)
+        if let physicalKeyCode = remappedTriggerKeys[triggerKeyCode] {
+            newFlags = modifierHandler.stripModifierByKeyCode(newFlags, keyCode: physicalKeyCode)
+            debugLog("Layer: after strip physical(\(physicalKeyCode)) flags=\(String(format: "0x%016llX", newFlags.rawValue))")
         }
 
         return .transformed(keyCode: targetKeyCode, flags: newFlags)

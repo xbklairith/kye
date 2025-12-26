@@ -417,4 +417,173 @@ final class RuleEngineTests: XCTestCase {
         let engine: any RuleEngineProtocol = ruleEngine
         XCTAssertNotNil(engine)
     }
+
+    // MARK: - Remapped Trigger Tests (Right Option -> Right Command layer)
+
+    func testRemappedTriggerStripsPhysicalModifier() {
+        // Scenario: Right Option remapped to Right Command, layer triggered by Right Command
+        // User presses: Right Option + H
+        // Expected: Left Arrow (no Option modifier)
+        let rule = Rule.layer(LayerRule(
+            id: "vim-nav",
+            description: nil,
+            enabled: true,
+            trigger: "right_command",
+            mappings: ["h": "left_arrow"]
+        ))
+        ruleEngine.rules = [rule]
+
+        // Simulate Right Option held (remapped to Right Command)
+        ruleEngine.setTriggerKeyHeld(true, keyCode: 0x36)  // Right Command (virtual)
+        ruleEngine.setRemappedTrigger(physicalKeyCode: 0x3D, targetKeyCode: 0x36)  // Right Option -> Right Command
+
+        // Flags contain Option (physical key) but layer triggers on Command
+        let deviceRightOption: UInt64 = 0x00000040
+        let flags = CGEventFlags(rawValue: CGEventFlags.maskAlternate.rawValue | deviceRightOption)
+
+        let result = ruleEngine.evaluate(keyCode: 0x04, flags: flags)  // H key
+
+        guard case .transformed(let keyCode, let newFlags) = result else {
+            XCTFail("Expected transformed result")
+            return
+        }
+
+        XCTAssertEqual(keyCode, 0x7B, "Should be Left Arrow")
+        XCTAssertFalse(newFlags.contains(.maskAlternate), "Option should be stripped (physical trigger key)")
+    }
+
+    func testRemappedTriggerPreservesLeftOption() {
+        // Scenario: Right Option + Left Option + H
+        // Expected: Option + Left Arrow (Left Option preserved)
+        let rule = Rule.layer(LayerRule(
+            id: "vim-nav",
+            description: nil,
+            enabled: true,
+            trigger: "right_command",
+            mappings: ["h": "left_arrow"]
+        ))
+        ruleEngine.rules = [rule]
+
+        ruleEngine.setTriggerKeyHeld(true, keyCode: 0x36)
+        ruleEngine.setRemappedTrigger(physicalKeyCode: 0x3D, targetKeyCode: 0x36)
+
+        // Both Left and Right Option pressed
+        let deviceLeftOption: UInt64 = 0x00000020
+        let deviceRightOption: UInt64 = 0x00000040
+        let flags = CGEventFlags(rawValue: CGEventFlags.maskAlternate.rawValue | deviceLeftOption | deviceRightOption)
+
+        let result = ruleEngine.evaluate(keyCode: 0x04, flags: flags)
+
+        guard case .transformed(let keyCode, let newFlags) = result else {
+            XCTFail("Expected transformed result")
+            return
+        }
+
+        XCTAssertEqual(keyCode, 0x7B, "Should be Left Arrow")
+        XCTAssertTrue(newFlags.contains(.maskAlternate), "Option mask should remain (Left Option still pressed)")
+        XCTAssertTrue(newFlags.rawValue & deviceLeftOption != 0, "Left Option device flag should be preserved")
+    }
+
+    func testRemappedTriggerPreservesControl() {
+        // Scenario: Control + Right Option + H
+        // Expected: Control + Left Arrow
+        let rule = Rule.layer(LayerRule(
+            id: "vim-nav",
+            description: nil,
+            enabled: true,
+            trigger: "right_command",
+            mappings: ["h": "left_arrow"]
+        ))
+        ruleEngine.rules = [rule]
+
+        ruleEngine.setTriggerKeyHeld(true, keyCode: 0x36)
+        ruleEngine.setRemappedTrigger(physicalKeyCode: 0x3D, targetKeyCode: 0x36)
+
+        // Control + Right Option
+        let deviceLeftControl: UInt64 = 0x00000001
+        let deviceRightOption: UInt64 = 0x00000040
+        let flags = CGEventFlags(rawValue: CGEventFlags.maskControl.rawValue | CGEventFlags.maskAlternate.rawValue | deviceLeftControl | deviceRightOption)
+
+        let result = ruleEngine.evaluate(keyCode: 0x04, flags: flags)
+
+        guard case .transformed(let keyCode, let newFlags) = result else {
+            XCTFail("Expected transformed result")
+            return
+        }
+
+        XCTAssertEqual(keyCode, 0x7B, "Should be Left Arrow")
+        XCTAssertTrue(newFlags.contains(.maskControl), "Control should be preserved")
+        XCTAssertFalse(newFlags.contains(.maskAlternate), "Option should be stripped")
+    }
+
+    func testRemappedTriggerPreservesShift() {
+        // Scenario: Shift + Right Option + J
+        // Expected: Shift + Down Arrow (for text selection)
+        let rule = Rule.layer(LayerRule(
+            id: "vim-nav",
+            description: nil,
+            enabled: true,
+            trigger: "right_command",
+            mappings: ["j": "down_arrow"]
+        ))
+        ruleEngine.rules = [rule]
+
+        ruleEngine.setTriggerKeyHeld(true, keyCode: 0x36)
+        ruleEngine.setRemappedTrigger(physicalKeyCode: 0x3D, targetKeyCode: 0x36)
+
+        // Shift + Right Option
+        let deviceLeftShift: UInt64 = 0x00000002
+        let deviceRightOption: UInt64 = 0x00000040
+        let flags = CGEventFlags(rawValue: CGEventFlags.maskShift.rawValue | CGEventFlags.maskAlternate.rawValue | deviceLeftShift | deviceRightOption)
+
+        let result = ruleEngine.evaluate(keyCode: 0x26, flags: flags)  // J key
+
+        guard case .transformed(let keyCode, let newFlags) = result else {
+            XCTFail("Expected transformed result")
+            return
+        }
+
+        XCTAssertEqual(keyCode, 0x7D, "Should be Down Arrow")
+        XCTAssertTrue(newFlags.contains(.maskShift), "Shift should be preserved")
+        XCTAssertFalse(newFlags.contains(.maskAlternate), "Option should be stripped")
+    }
+
+    func testRemappedTriggerPreservesMultipleModifiers() {
+        // Scenario: Control + Shift + Right Option + H
+        // Expected: Control + Shift + Left Arrow
+        let rule = Rule.layer(LayerRule(
+            id: "vim-nav",
+            description: nil,
+            enabled: true,
+            trigger: "right_command",
+            mappings: ["h": "left_arrow"]
+        ))
+        ruleEngine.rules = [rule]
+
+        ruleEngine.setTriggerKeyHeld(true, keyCode: 0x36)
+        ruleEngine.setRemappedTrigger(physicalKeyCode: 0x3D, targetKeyCode: 0x36)
+
+        // Control + Shift + Right Option
+        let deviceLeftControl: UInt64 = 0x00000001
+        let deviceLeftShift: UInt64 = 0x00000002
+        let deviceRightOption: UInt64 = 0x00000040
+        let flags = CGEventFlags(rawValue:
+            CGEventFlags.maskControl.rawValue |
+            CGEventFlags.maskShift.rawValue |
+            CGEventFlags.maskAlternate.rawValue |
+            deviceLeftControl | deviceLeftShift | deviceRightOption
+        )
+
+        let result = ruleEngine.evaluate(keyCode: 0x04, flags: flags)
+
+        guard case .transformed(let keyCode, let newFlags) = result else {
+            XCTFail("Expected transformed result")
+            return
+        }
+
+        XCTAssertEqual(keyCode, 0x7B, "Should be Left Arrow")
+        XCTAssertTrue(newFlags.contains(.maskControl), "Control should be preserved")
+        XCTAssertTrue(newFlags.contains(.maskShift), "Shift should be preserved")
+        XCTAssertFalse(newFlags.contains(.maskAlternate), "Option should be stripped")
+    }
 }
