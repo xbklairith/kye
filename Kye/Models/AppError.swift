@@ -26,6 +26,9 @@ enum AppError: Error, LocalizedError, Equatable {
     /// Configuration validation error for a specific rule
     case configurationValidationError(ruleId: String, message: String)
 
+    /// Failed to register/unregister for launch at login
+    case launchAtLoginFailed
+
     var errorDescription: String? {
         switch self {
         case .eventTapCreationFailed:
@@ -51,6 +54,9 @@ enum AppError: Error, LocalizedError, Equatable {
 
         case .configurationValidationError(let ruleId, let message):
             return "Rule '\(ruleId)' is invalid: \(message)"
+
+        case .launchAtLoginFailed:
+            return "Failed to configure launch at login. Please check system settings."
         }
     }
 }

@@ -74,6 +74,14 @@ final class AppErrorTests: XCTestCase {
         XCTAssertTrue(error.errorDescription!.contains("Invalid from key"))
     }
 
+    func testLaunchAtLoginFailedDescription() {
+        let error = AppError.launchAtLoginFailed
+        XCTAssertEqual(
+            error.errorDescription,
+            "Failed to configure launch at login. Please check system settings."
+        )
+    }
+
     // MARK: - All Error Cases Have Descriptions
 
     func testAllErrorCasesHaveDescriptions() {
@@ -85,7 +93,8 @@ final class AppErrorTests: XCTestCase {
             .eventTapDisabled,
             .configurationInaccessible,
             .eventTapTimeout,
-            .configurationValidationError(ruleId: "test", message: "test")
+            .configurationValidationError(ruleId: "test", message: "test"),
+            .launchAtLoginFailed
         ]
 
         for error in allErrors {
@@ -106,7 +115,8 @@ final class AppErrorTests: XCTestCase {
             .eventTapDisabled,
             .configurationInaccessible,
             .eventTapTimeout,
-            .configurationValidationError(ruleId: "rule-001", message: "test")
+            .configurationValidationError(ruleId: "rule-001", message: "test"),
+            .launchAtLoginFailed
         ]
 
         for error in allErrors {

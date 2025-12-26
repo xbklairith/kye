@@ -25,6 +25,16 @@
 		B1000005 /* ModifierHandlerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000005 /* ModifierHandlerTests.swift */; };
 		B1000006 /* RuleEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000006 /* RuleEngineTests.swift */; };
 		B1000007 /* EventTapManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000007 /* EventTapManagerTests.swift */; };
+		A1000012 /* LoggerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000014 /* LoggerService.swift */; };
+		A1000013 /* ConfigurationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015 /* ConfigurationManager.swift */; };
+		A1000014 /* PermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000016 /* PermissionManager.swift */; };
+		A1000015 /* AppController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000017 /* AppController.swift */; };
+		A1000016 /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000018 /* LaunchAtLoginManager.swift */; };
+		B1000008 /* LoggerServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000008 /* LoggerServiceTests.swift */; };
+		B1000009 /* ConfigurationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000009 /* ConfigurationManagerTests.swift */; };
+		B1000010 /* PermissionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000010 /* PermissionManagerTests.swift */; };
+		B1000011 /* AppControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000011 /* AppControllerTests.swift */; };
+		B1000012 /* LaunchAtLoginManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000012 /* LaunchAtLoginManagerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,6 +70,16 @@
 		B2000006 /* RuleEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleEngineTests.swift; sourceTree = "<group>"; };
 		B2000007 /* EventTapManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTapManagerTests.swift; sourceTree = "<group>"; };
 		B3000001 /* KyeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KyeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2000014 /* LoggerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggerService.swift; sourceTree = "<group>"; };
+		A2000015 /* ConfigurationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationManager.swift; sourceTree = "<group>"; };
+		A2000016 /* PermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionManager.swift; sourceTree = "<group>"; };
+		A2000017 /* AppController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppController.swift; sourceTree = "<group>"; };
+		A2000018 /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
+		B2000008 /* LoggerServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggerServiceTests.swift; sourceTree = "<group>"; };
+		B2000009 /* ConfigurationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationManagerTests.swift; sourceTree = "<group>"; };
+		B2000010 /* PermissionManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionManagerTests.swift; sourceTree = "<group>"; };
+		B2000011 /* AppControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppControllerTests.swift; sourceTree = "<group>"; };
+		B2000012 /* LaunchAtLoginManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManagerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,6 +156,11 @@
 		A5000006 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				A2000014 /* LoggerService.swift */,
+				A2000015 /* ConfigurationManager.swift */,
+				A2000016 /* PermissionManager.swift */,
+				A2000017 /* AppController.swift */,
+				A2000018 /* LaunchAtLoginManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -168,6 +193,11 @@
 				B2000005 /* ModifierHandlerTests.swift */,
 				B2000006 /* RuleEngineTests.swift */,
 				B2000007 /* EventTapManagerTests.swift */,
+				B2000008 /* LoggerServiceTests.swift */,
+				B2000009 /* ConfigurationManagerTests.swift */,
+				B2000010 /* PermissionManagerTests.swift */,
+				B2000011 /* AppControllerTests.swift */,
+				B2000012 /* LaunchAtLoginManagerTests.swift */,
 			);
 			path = KyeTests;
 			sourceTree = "<group>";
@@ -281,6 +311,11 @@
 				A1000009 /* ModifierHandler.swift in Sources */,
 				A1000010 /* RuleEngine.swift in Sources */,
 				A1000011 /* EventTapManager.swift in Sources */,
+				A1000012 /* LoggerService.swift in Sources */,
+				A1000013 /* ConfigurationManager.swift in Sources */,
+				A1000014 /* PermissionManager.swift in Sources */,
+				A1000015 /* AppController.swift in Sources */,
+				A1000016 /* LaunchAtLoginManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -295,6 +330,11 @@
 				B1000005 /* ModifierHandlerTests.swift in Sources */,
 				B1000006 /* RuleEngineTests.swift in Sources */,
 				B1000007 /* EventTapManagerTests.swift in Sources */,
+				B1000008 /* LoggerServiceTests.swift in Sources */,
+				B1000009 /* ConfigurationManagerTests.swift in Sources */,
+				B1000010 /* PermissionManagerTests.swift in Sources */,
+				B1000011 /* AppControllerTests.swift in Sources */,
+				B1000012 /* LaunchAtLoginManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
