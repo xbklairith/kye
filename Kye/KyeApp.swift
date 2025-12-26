@@ -38,6 +38,9 @@ struct KyeApp: App {
         )
 
         _appController = StateObject(wrappedValue: controller)
+
+        // Share controller with AppDelegate for lifecycle management
+        AppDelegate.sharedController = controller
     }
 
     var body: some Scene {
@@ -72,11 +75,18 @@ struct KyeApp: App {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    // Reference to app controller set by KyeApp
+    static var sharedController: AppController?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // App launched - initialization handled by AppController
+        // Start the app controller on launch
+        Task { @MainActor in
+            try? await AppDelegate.sharedController?.start()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        // Cleanup handled by AppController deinit
+        // Cleanup
+        AppDelegate.sharedController?.stop()
     }
 }
