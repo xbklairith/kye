@@ -79,8 +79,8 @@ final class EventTapManager: EventTapManaging {
             throw AppError.eventTapCreationFailed
         }
 
-        // Add to current run loop
-        CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
+        // Add to main run loop (must be main for UI apps)
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
 
         // Enable the tap
         CGEvent.tapEnable(tap: tap, enable: true)
@@ -100,7 +100,7 @@ final class EventTapManager: EventTapManaging {
         }
 
         if let source = runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .commonModes)
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
         }
 
         eventTap = nil
