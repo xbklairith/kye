@@ -34,20 +34,20 @@ final class AppController: AppControlling, ObservableObject {
 
     private(set) var isEnabled: Bool = false
 
-    private let permissionManager: PermissionManaging
-    private let configManager: ConfigurationManaging
-    private let eventTapManager: EventTapManaging
-    private var ruleEngine: RuleEngineProtocol
-    private let keyMapper: KeyMapping
-    private let logger: Logging?
+    private let permissionManager: any PermissionManaging
+    private let configManager: any ConfigurationManaging
+    private let eventTapManager: any EventTapManaging
+    private let ruleEngine: RuleEngine
+    private let keyMapper: any KeyMapping
+    private let logger: (any Logging)?
 
     init(
-        permissionManager: PermissionManaging,
-        configManager: ConfigurationManaging,
-        eventTapManager: EventTapManaging,
-        ruleEngine: RuleEngineProtocol,
-        keyMapper: KeyMapping,
-        logger: Logging? = nil
+        permissionManager: any PermissionManaging,
+        configManager: any ConfigurationManaging,
+        eventTapManager: any EventTapManaging,
+        ruleEngine: RuleEngine,
+        keyMapper: any KeyMapping,
+        logger: (any Logging)? = nil
     ) {
         self.permissionManager = permissionManager
         self.configManager = configManager
