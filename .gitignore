@@ -1,0 +1,39 @@
+# Documentation (internal planning)
+docx/
+
+# Claude Code
+.claude/
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# IDEs
+.idea/
+.vscode/
+*.code-workspace
+
+# Archives
+*.ipa
+*.dSYM.zip
+*.dSYM
