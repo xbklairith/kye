@@ -381,6 +381,27 @@ final class AppControllerTests: XCTestCase {
         XCTAssertTrue(controller.rules.isEmpty, "rules must not republish when save fails")
         XCTAssertTrue(engine.rules.isEmpty, "engine must be untouched when save fails")
     }
+
+    func testSetRuleEnabledRoundTripsThroughConfigFileLeavingOtherRulesUntouched() throws {
+        let configURL = configManager.configurationURL
+        let r1 = BasicRule(id: "r1", description: "one", enabled: true, from: "a", to: "b")
+        let r2 = BasicRule(id: "r2", description: "two", enabled: true, from: "c", to: "d")
+        try configManager.save(Configuration(version: "1.0", enabled: true, rules: [.basic(r1), .basic(r2)]))
+
+        try appController.setRuleEnabled(id: "r1", enabled: false)
+
+        // Re-read from disk with a fresh manager — a true file round-trip.
+        let fresh = ConfigurationManager(configurationURL: configURL, keyMapper: keyMapper)
+        let reloaded = try fresh.load()
+
+        let byId = Dictionary(uniqueKeysWithValues: reloaded.rules.map { ($0.id, $0) })
+        guard case .basic(let reloadedR1)? = byId["r1"],
+              case .basic(let reloadedR2)? = byId["r2"] else {
+            return XCTFail("expected both rules present on disk")
+        }
+        XCTAssertFalse(reloadedR1.enabled, "toggled rule should be disabled on disk")
+        XCTAssertTrue(reloadedR2.enabled, "other rule should be untouched on disk")
+    }
 }
 
 /// Test double that always fails on `save`, leaving its configuration unchanged.
