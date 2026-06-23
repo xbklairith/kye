@@ -437,3 +437,50 @@ final class RuleTypeDiscriminationTests: XCTestCase {
         XCTAssertEqual(decodedConfig.rules.count, originalConfig.rules.count)
     }
 }
+
+final class RuleIdentityTests: XCTestCase {
+
+    private func basic(_ id: String = "b1", enabled: Bool = true) -> Rule {
+        .basic(BasicRule(id: id, description: "d", enabled: enabled, from: "a", to: "b"))
+    }
+
+    private func layer(_ id: String = "l1", enabled: Bool = true) -> Rule {
+        .layer(LayerRule(id: id, description: "d", enabled: enabled, trigger: "right_command", mappings: ["h": "left_arrow"]))
+    }
+
+    func testIdReturnsInnerId() {
+        XCTAssertEqual(basic("b1").id, "b1")
+        XCTAssertEqual(layer("l1").id, "l1")
+    }
+
+    func testKindDiscriminates() {
+        XCTAssertEqual(basic().kind, .basic)
+        XCTAssertEqual(layer().kind, .layer)
+    }
+
+    func testWithEnabledFlipsAndPreservesBasicFields() {
+        guard case .basic(let br) = basic("b1", enabled: true).withEnabled(false) else {
+            return XCTFail("expected basic")
+        }
+        XCTAssertFalse(br.enabled)
+        XCTAssertEqual(br.id, "b1")
+        XCTAssertEqual(br.from, "a")
+        XCTAssertEqual(br.to, "b")
+        XCTAssertEqual(br.description, "d")
+    }
+
+    func testWithEnabledFlipsAndPreservesLayerFields() {
+        guard case .layer(let lr) = layer("l1", enabled: false).withEnabled(true) else {
+            return XCTFail("expected layer")
+        }
+        XCTAssertTrue(lr.enabled)
+        XCTAssertEqual(lr.id, "l1")
+        XCTAssertEqual(lr.trigger, "right_command")
+        XCTAssertEqual(lr.mappings, ["h": "left_arrow"])
+    }
+
+    func testIdentifiableUsableInForEach() {
+        let rules: [Rule] = [basic("x"), layer("y")]
+        XCTAssertEqual(rules.map(\.id), ["x", "y"])
+    }
+}
