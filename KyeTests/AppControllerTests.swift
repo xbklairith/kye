@@ -548,6 +548,47 @@ final class AppControllerTests: XCTestCase {
         XCTAssertEqual(mockEventTapManager.setEnabledCallCount, countAfterFirstResume,
                        "a second resume must not touch the tap")
     }
+
+    // MARK: - Parse-error resilience on auto-reload
+
+    func testReloadFromDiskKeepsLastGoodRulesOnParseError() throws {
+        try appController.addRule(.basic(BasicRule(
+            id: "r1", description: "a→b", enabled: true, from: "a", to: "b"
+        )))
+        XCTAssertEqual(appController.rules.count, 1)
+
+        // External edit corrupts the file.
+        try "{ this is not valid json".write(
+            to: configManager.configurationURL, atomically: true, encoding: .utf8
+        )
+
+        appController.reloadFromDisk() // watcher-driven, must not throw
+
+        XCTAssertEqual(appController.rules.count, 1, "last-good rules must stay active")
+        XCTAssertNotNil(appController.reloadError, "parse failure should surface a banner message")
+    }
+
+    func testReloadFromDiskClearsErrorOnRecovery() throws {
+        try appController.addRule(.basic(BasicRule(
+            id: "r1", description: "a→b", enabled: true, from: "a", to: "b"
+        )))
+
+        try "{ broken".write(to: configManager.configurationURL, atomically: true, encoding: .utf8)
+        appController.reloadFromDisk()
+        XCTAssertNotNil(appController.reloadError)
+
+        // External edit fixes the file with a different valid config.
+        let recovered = Configuration(version: 1, enabled: true, rules: [
+            .basic(BasicRule(id: "r2", description: "c→d", enabled: true, from: "c", to: "d"))
+        ])
+        let writer = ConfigurationManager(configurationURL: configManager.configurationURL, keyMapper: keyMapper)
+        try writer.save(recovered)
+
+        appController.reloadFromDisk()
+
+        XCTAssertNil(appController.reloadError, "valid reload should clear the banner")
+        XCTAssertEqual(appController.rules.map(\.id), ["r2"], "recovered rules become active")
+    }
 }
 
 /// Test double that always fails on `save`, leaving its configuration unchanged.
