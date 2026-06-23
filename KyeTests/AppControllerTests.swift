@@ -590,6 +590,50 @@ final class AppControllerTests: XCTestCase {
         XCTAssertNil(appController.reloadError, "valid reload should clear the banner")
         XCTAssertEqual(appController.rules.map(\.id), ["r2"], "recovered rules become active")
     }
+
+    // MARK: - Config-watcher lifecycle (integration)
+
+    func testExternalConfigWriteTriggersReload() async throws {
+        mockPermissionManager.mockStatus = .granted
+        try await appController.start()
+
+        let reloaded = expectation(description: "rules reload after an external config write")
+        appController.$rules
+            .dropFirst()
+            .sink { rules in
+                if rules.map(\.id) == ["external_rule"] { reloaded.fulfill() }
+            }
+            .store(in: &cancellables)
+
+        // An external editor writes a distinct config to the watched directory.
+        let external = ConfigurationManager(configurationURL: configManager.configurationURL, keyMapper: keyMapper)
+        try external.save(Configuration(version: "1.0", enabled: true, rules: [
+            .basic(BasicRule(id: "external_rule", description: nil, enabled: true, from: "a", to: "b"))
+        ]))
+
+        await fulfillment(of: [reloaded], timeout: 5.0)
+        XCTAssertEqual(appController.rules.map(\.id), ["external_rule"])
+    }
+
+    func testStopEndsConfigWatching() async throws {
+        mockPermissionManager.mockStatus = .granted
+        try await appController.start()
+        appController.stop()
+
+        // After stop, an external write must NOT mutate published rules.
+        appController.$rules
+            .dropFirst()
+            .sink { _ in XCTFail("rules must not reload after stop()") }
+            .store(in: &cancellables)
+
+        let external = ConfigurationManager(configurationURL: configManager.configurationURL, keyMapper: keyMapper)
+        try external.save(Configuration(version: "1.0", enabled: true, rules: [
+            .basic(BasicRule(id: "post_stop", description: nil, enabled: true, from: "a", to: "b"))
+        ]))
+
+        // Give any stray FSEvents time to (not) fire.
+        try await Task.sleep(nanoseconds: 1_000_000_000)
+    }
 }
 
 /// Test double that always fails on `save`, leaving its configuration unchanged.
