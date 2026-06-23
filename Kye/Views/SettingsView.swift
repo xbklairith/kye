@@ -371,11 +371,17 @@ private struct RuleRow: View {
                         .help(errors.joined(separator: "\n"))
                 }
 
-                Button(action: onEdit) {
-                    Image(systemName: "pencil")
+                if RuleDraft.isInlineEditable(rule) {
+                    Button(action: onEdit) {
+                        Image(systemName: "pencil")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Edit rule")
+                } else {
+                    Image(systemName: "pencil.slash")
+                        .foregroundColor(.secondary)
+                        .help("Multi-key layers are edited in the config file")
                 }
-                .buttonStyle(.borderless)
-                .help("Edit rule")
 
                 Button(action: onDelete) {
                     Image(systemName: "trash")

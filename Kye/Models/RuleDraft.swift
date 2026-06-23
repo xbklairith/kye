@@ -26,6 +26,17 @@ struct RuleDraft: Equatable {
                   from: "", to: "", trigger: "", mappingFrom: "", mappingTo: "")
     }
 
+    /// Whether a rule can round-trip losslessly through this single-mapping editor. Layer rules
+    /// with more than one mapping would be truncated on save, so they stay JSON-only for now.
+    static func isInlineEditable(_ rule: Rule) -> Bool {
+        switch rule {
+        case .basic:
+            return true
+        case .layer(let r):
+            return r.mappings.count <= 1
+        }
+    }
+
     /// Builds a draft from an existing rule for editing.
     static func make(from rule: Rule) -> RuleDraft {
         switch rule {

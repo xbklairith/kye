@@ -47,6 +47,22 @@ final class RuleDraftTests: XCTestCase {
         XCTAssertNil(draft.toRule(), "layer rule needs trigger and a full mapping pair")
     }
 
+    func testInlineEditableForBasicAndSingleMappingLayer() {
+        let basic = Rule.basic(BasicRule(id: "b", description: nil, enabled: true, from: "a", to: "b"))
+        let singleLayer = Rule.layer(LayerRule(id: "l", description: nil, enabled: true,
+                                               trigger: "right_command", mappings: ["h": "left_arrow"]))
+        XCTAssertTrue(RuleDraft.isInlineEditable(basic))
+        XCTAssertTrue(RuleDraft.isInlineEditable(singleLayer))
+    }
+
+    func testNotInlineEditableForMultiMappingLayer() {
+        let multiLayer = Rule.layer(LayerRule(id: "vim", description: nil, enabled: true,
+                                              trigger: "right_command",
+                                              mappings: ["h": "left_arrow", "j": "down_arrow"]))
+        XCTAssertFalse(RuleDraft.isInlineEditable(multiLayer),
+                       "multi-mapping layer rules can't round-trip through the single-mapping editor")
+    }
+
     func testWhitespaceIsTrimmedInBuiltRule() {
         let draft = RuleDraft(kind: .basic, id: "  b3 ", description: "  ", enabled: true,
                               from: " a ", to: " b ", trigger: "", mappingFrom: "", mappingTo: "")
