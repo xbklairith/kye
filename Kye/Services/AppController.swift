@@ -70,6 +70,15 @@ final class AppController: AppControlling, ObservableObject {
     }
 
     func start() async throws {
+        // Idempotent: start() is invoked from several places (app launch, menu appearance, and
+        // the permission-granted callback). Once running, a redundant call must not re-check
+        // permission and clobber the state — a transient AXIsProcessTrusted() read of `denied`
+        // would otherwise revert a working app to `.waitingForPermission`.
+        guard state != .running else {
+            logger?.info("Start requested while already running; ignoring", category: .app)
+            return
+        }
+
         logger?.info("Starting Kye app controller", category: .app)
         debugLog("START: Beginning app controller startup")
 
