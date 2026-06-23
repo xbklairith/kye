@@ -500,6 +500,54 @@ final class AppControllerTests: XCTestCase {
         XCTAssertTrue(engine.rules.isEmpty, "engine untouched on save failure")
         XCTAssertTrue(controller.rules.isEmpty, "published rules untouched on save failure")
     }
+
+    // MARK: - Capture suspend / resume
+
+    func testSuspendResumeAroundCapturePreservesEnabledState() async throws {
+        mockPermissionManager.mockStatus = .granted
+        try await appController.start()
+        XCTAssertTrue(appController.isEnabled)
+        XCTAssertTrue(mockEventTapManager.isEnabled)
+
+        appController.suspendForCapture()
+        XCTAssertFalse(mockEventTapManager.isEnabled, "tap suspended during capture")
+        XCTAssertTrue(appController.isEnabled, "logical enabled must not change")
+        XCTAssertEqual(appController.state, .running, "menu-bar state must not change")
+
+        appController.resumeAfterCapture()
+        XCTAssertTrue(mockEventTapManager.isEnabled, "tap restored after capture")
+        XCTAssertTrue(appController.isEnabled)
+        XCTAssertEqual(appController.state, .running)
+    }
+
+    func testResumeAfterCaptureKeepsTapDisabledWhenRemappingGloballyOff() async throws {
+        mockPermissionManager.mockStatus = .granted
+        try await appController.start()
+        appController.toggleEnabled() // user turns remapping OFF
+        XCTAssertFalse(appController.isEnabled)
+        XCTAssertFalse(mockEventTapManager.isEnabled)
+
+        appController.suspendForCapture()
+        appController.resumeAfterCapture()
+
+        XCTAssertFalse(mockEventTapManager.isEnabled, "must NOT re-enable a globally-disabled tap")
+        XCTAssertFalse(appController.isEnabled)
+        XCTAssertEqual(appController.state, .disabled)
+    }
+
+    func testResumeAfterCaptureIsIdempotent() async throws {
+        mockPermissionManager.mockStatus = .granted
+        try await appController.start()
+
+        appController.suspendForCapture()
+        appController.resumeAfterCapture()
+        let countAfterFirstResume = mockEventTapManager.setEnabledCallCount
+
+        appController.resumeAfterCapture() // second resume: no-op
+
+        XCTAssertEqual(mockEventTapManager.setEnabledCallCount, countAfterFirstResume,
+                       "a second resume must not touch the tap")
+    }
 }
 
 /// Test double that always fails on `save`, leaving its configuration unchanged.
