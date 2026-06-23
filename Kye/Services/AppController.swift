@@ -174,12 +174,34 @@ final class AppController: AppControlling, ObservableObject {
         guard let index = updatedRules.firstIndex(where: { $0.id == id }) else { return }
 
         updatedRules[index] = updatedRules[index].withEnabled(enabled)
-        let updated = Configuration(version: current.version, enabled: current.enabled, rules: updatedRules)
+        try applyRules(updatedRules)
+    }
 
-        try saveAndApply(updated)
+    /// Appends a rule, persists, reloads the engine, and republishes. Non-mutating on save failure.
+    func addRule(_ rule: Rule) throws {
+        try applyRules(configManager.configuration.rules + [rule])
+    }
+
+    /// Replaces the rule whose `id` matches, preserving order. No-op if the id is absent.
+    func updateRule(_ rule: Rule) throws {
+        var rules = configManager.configuration.rules
+        guard let index = rules.firstIndex(where: { $0.id == rule.id }) else { return }
+        rules[index] = rule
+        try applyRules(rules)
+    }
+
+    /// Removes the rule with the given `id`, persists, reloads the engine, and republishes.
+    func deleteRule(id: String) throws {
+        try applyRules(configManager.configuration.rules.filter { $0.id != id })
     }
 
     // MARK: - Private
+
+    /// Builds a `Configuration` from a new rules array (preserving `version`/`enabled`) and applies it.
+    private func applyRules(_ rules: [Rule]) throws {
+        let current = configManager.configuration
+        try saveAndApply(Configuration(version: current.version, enabled: current.enabled, rules: rules))
+    }
 
     /// Persists a configuration, then reloads the engine and republishes derived state.
     /// Save runs first so a failure leaves the engine and published state untouched.
