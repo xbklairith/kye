@@ -238,6 +238,39 @@ final class ConfigurationManagerTests: XCTestCase {
         XCTAssertTrue(errors[0].message.contains("invalid_key_name"))
     }
 
+    func testValidateDetectsDuplicateRuleIds() {
+        let config = Configuration(
+            version: "1.0",
+            enabled: true,
+            rules: [
+                .basic(BasicRule(id: "dup", description: nil, enabled: true, from: "a", to: "b")),
+                .layer(LayerRule(id: "dup", description: nil, enabled: true, trigger: "right_command", mappings: ["h": "left_arrow"]))
+            ]
+        )
+
+        let errors = configManager.validate(config, keyMapper: keyMapper)
+
+        XCTAssertTrue(
+            errors.contains { $0.ruleId == "dup" && $0.message.lowercased().contains("duplicate") },
+            "Expected a duplicate-id error mentioning 'dup'; got \(errors)"
+        )
+    }
+
+    func testValidateAllowsUniqueRuleIds() {
+        let config = Configuration(
+            version: "1.0",
+            enabled: true,
+            rules: [
+                .basic(BasicRule(id: "r1", description: nil, enabled: true, from: "a", to: "b")),
+                .basic(BasicRule(id: "r2", description: nil, enabled: true, from: "c", to: "d"))
+            ]
+        )
+
+        let errors = configManager.validate(config, keyMapper: keyMapper)
+
+        XCTAssertFalse(errors.contains { $0.message.lowercased().contains("duplicate") })
+    }
+
     func testValidateDetectsInvalidToKey() {
         let config = Configuration(
             version: "1.0",
