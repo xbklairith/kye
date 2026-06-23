@@ -143,9 +143,17 @@ final class AppController: AppControlling, ObservableObject {
     func reloadConfiguration() throws {
         logger?.info("Reloading configuration", category: .configuration)
 
+        // Snapshot before reload overwrites configuration in place, so identical
+        // content (e.g. our own atomic write) is a no-op — preventing reload loops.
+        let before = configManager.configuration
         try configManager.reload()
-
         let config = configManager.configuration
+
+        guard before != config else {
+            logger?.info("Configuration unchanged on reload; skipping", category: .configuration)
+            return
+        }
+
         let errors = configManager.validate(config, keyMapper: keyMapper)
         if !errors.isEmpty {
             for error in errors {

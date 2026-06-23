@@ -283,7 +283,10 @@ final class AppControllerTests: XCTestCase {
                 ))
             ]
         )
-        try configManager.save(invalidConfig)
+        // External writer changes the file so the in-memory config stays stale and
+        // reloadConfiguration's content-diff sees a real change (not a self-write no-op).
+        let external = ConfigurationManager(configurationURL: configManager.configurationURL, keyMapper: keyMapper)
+        try external.save(invalidConfig)
 
         try appController.reloadConfiguration()
 
