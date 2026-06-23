@@ -32,6 +32,7 @@
 		A1000016 /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000018 /* LaunchAtLoginManager.swift */; };
 		A1000020 /* KeySymbol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000020 /* KeySymbol.swift */; };
 		A1000021 /* KeyCaptureController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000021 /* KeyCaptureController.swift */; };
+		A1000022 /* ConfigFileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000022 /* ConfigFileWatcher.swift */; };
 		B1000008 /* LoggerServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000008 /* LoggerServiceTests.swift */; };
 		B1000009 /* ConfigurationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000009 /* ConfigurationManagerTests.swift */; };
 		B1000010 /* PermissionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000010 /* PermissionManagerTests.swift */; };
@@ -81,6 +82,7 @@
 		B3000001 /* KyeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KyeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2000014 /* LoggerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggerService.swift; sourceTree = "<group>"; };
 		A2000015 /* ConfigurationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationManager.swift; sourceTree = "<group>"; };
+		A2000022 /* ConfigFileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigFileWatcher.swift; sourceTree = "<group>"; };
 		A2000016 /* PermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionManager.swift; sourceTree = "<group>"; };
 		A2000017 /* AppController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppController.swift; sourceTree = "<group>"; };
 		A2000018 /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
@@ -174,6 +176,7 @@
 			children = (
 				A2000014 /* LoggerService.swift */,
 				A2000015 /* ConfigurationManager.swift */,
+				A2000022 /* ConfigFileWatcher.swift */,
 				A2000016 /* PermissionManager.swift */,
 				A2000017 /* AppController.swift */,
 				A2000018 /* LaunchAtLoginManager.swift */,
@@ -342,6 +345,7 @@
 				A1000011 /* EventTapManager.swift in Sources */,
 				A1000012 /* LoggerService.swift in Sources */,
 				A1000013 /* ConfigurationManager.swift in Sources */,
+				A1000022 /* ConfigFileWatcher.swift in Sources */,
 				A1000014 /* PermissionManager.swift in Sources */,
 				A1000015 /* AppController.swift in Sources */,
 				A1000016 /* LaunchAtLoginManager.swift in Sources */,
