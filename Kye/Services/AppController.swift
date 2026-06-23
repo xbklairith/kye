@@ -112,6 +112,7 @@ final class AppController: AppControlling, ObservableObject {
             try eventTapManager.start()
             isEnabled = true
             state = .running
+            startWatchingConfig()
             logger?.info("Kye is now active", category: .app)
             debugLog("Event tap started successfully! isEnabled=\(isEnabled)")
         } catch {
@@ -124,10 +125,28 @@ final class AppController: AppControlling, ObservableObject {
     func stop() {
         logger?.info("Stopping Kye app controller", category: .app)
 
+        stopWatchingConfig()
         eventTapManager.stop()
         permissionManager.stopMonitoring()
         isEnabled = false
         state = .disabled
+    }
+
+    /// Begins watching the config directory so external edits auto-reload. Our own atomic
+    /// writes are filtered out by the content-diff guard in `reloadConfiguration` (REQ-B17).
+    private func startWatchingConfig() {
+        guard configWatcher == nil else { return }
+        let directory = configManager.configurationURL.deletingLastPathComponent()
+        let watcher = ConfigFileWatcher(directory: directory) { [weak self] in
+            self?.reloadFromDisk()
+        }
+        watcher.start()
+        configWatcher = watcher
+    }
+
+    private func stopWatchingConfig() {
+        configWatcher?.stop()
+        configWatcher = nil
     }
 
     func toggleEnabled() {
@@ -233,6 +252,9 @@ final class AppController: AppControlling, ObservableObject {
 
     /// True while a key-capture has suspended the tap; guards resume idempotency.
     private var isCapturing = false
+
+    /// Watches the config directory for external edits while the app is running.
+    private var configWatcher: ConfigFileWatcher?
 
     /// Builds a `Configuration` from a new rules array (preserving `version`/`enabled`) and applies it.
     private func applyRules(_ rules: [Rule]) throws {
