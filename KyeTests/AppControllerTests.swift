@@ -439,6 +439,67 @@ final class AppControllerTests: XCTestCase {
         XCTAssertEqual(ruleEngine.rules.count, 1)
         XCTAssertEqual(ruleEngine.rules.first?.id, "r2", "changed content must reload the engine")
     }
+
+    // MARK: - CRUD (add / update / delete)
+
+    func testAddRulePersistsReloadsAndRepublishes() throws {
+        try configManager.save(Configuration(version: "1.0", enabled: true, rules: []))
+
+        try appController.addRule(.basic(BasicRule(id: "r1", description: "new", enabled: true, from: "a", to: "b")))
+
+        XCTAssertEqual(configManager.configuration.rules.map(\.id), ["r1"])
+        XCTAssertEqual(ruleEngine.rules.map(\.id), ["r1"])
+        XCTAssertEqual(appController.rules.map(\.id), ["r1"])
+    }
+
+    func testUpdateRuleReplacesMatchingIdLeavingOthersUntouched() throws {
+        try configManager.save(Configuration(version: "1.0", enabled: true, rules: [
+            .basic(BasicRule(id: "r1", description: "one", enabled: true, from: "a", to: "b")),
+            .basic(BasicRule(id: "r2", description: "two", enabled: true, from: "c", to: "d"))
+        ]))
+
+        try appController.updateRule(.basic(BasicRule(id: "r1", description: "one-edited", enabled: false, from: "a", to: "e")))
+
+        let byId = Dictionary(uniqueKeysWithValues: configManager.configuration.rules.map { ($0.id, $0) })
+        guard case .basic(let r1)? = byId["r1"], case .basic(let r2)? = byId["r2"] else {
+            return XCTFail("expected both rules present")
+        }
+        XCTAssertEqual(r1.to, "e")
+        XCTAssertFalse(r1.enabled)
+        XCTAssertEqual(r2.description, "two", "other rule must be untouched")
+    }
+
+    func testDeleteRuleRemovesAndPersists() throws {
+        try configManager.save(Configuration(version: "1.0", enabled: true, rules: [
+            .basic(BasicRule(id: "r1", description: nil, enabled: true, from: "a", to: "b")),
+            .basic(BasicRule(id: "r2", description: nil, enabled: true, from: "c", to: "d"))
+        ]))
+
+        try appController.deleteRule(id: "r1")
+
+        XCTAssertEqual(configManager.configuration.rules.map(\.id), ["r2"])
+        XCTAssertEqual(appController.rules.map(\.id), ["r2"])
+    }
+
+    func testCRUDSaveFailureLeavesStateUnchanged() throws {
+        let engine = RuleEngine(keyMapper: keyMapper, modifierHandler: ModifierHandler())
+        let seed = Configuration(
+            version: "1.0", enabled: true,
+            rules: [.basic(BasicRule(id: "r1", description: nil, enabled: true, from: "a", to: "b"))]
+        )
+        let controller = AppController(
+            permissionManager: MockPermissionManager(),
+            configManager: ThrowingOnSaveConfigManager(configuration: seed),
+            eventTapManager: MockEventTapManager(),
+            ruleEngine: engine,
+            keyMapper: keyMapper,
+            logger: mockLogger
+        )
+
+        XCTAssertThrowsError(try controller.addRule(.basic(BasicRule(id: "r2", description: nil, enabled: true, from: "c", to: "d"))))
+        XCTAssertTrue(engine.rules.isEmpty, "engine untouched on save failure")
+        XCTAssertTrue(controller.rules.isEmpty, "published rules untouched on save failure")
+    }
 }
 
 /// Test double that always fails on `save`, leaving its configuration unchanged.
