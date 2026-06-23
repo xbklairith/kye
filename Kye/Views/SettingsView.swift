@@ -113,6 +113,15 @@ struct RulesSettingsView: View {
     @ObservedObject var appController: AppController
     @State private var statusMessage: String?
     @State private var saveError: String?
+    @State private var editorContext: EditorContext?
+    @State private var ruleToDelete: Rule?
+
+    /// Identifies an in-flight editor session for `.sheet(item:)`.
+    private struct EditorContext: Identifiable {
+        let id = UUID()
+        var draft: RuleDraft
+        var isEditing: Bool
+    }
 
     /// Splits rules into basic remaps and layer rules, preserving original order.
     static func groupedRules(_ rules: [Rule]) -> (remaps: [Rule], layers: [Rule]) {
@@ -133,6 +142,12 @@ struct RulesSettingsView: View {
                 Text("Active Rules")
                     .font(.headline)
                 Spacer()
+                Button("Add Rule") {
+                    editorContext = EditorContext(
+                        draft: .empty(kind: .basic, id: UUID().uuidString),
+                        isEditing: false
+                    )
+                }
                 Button("Reload") {
                     reloadConfiguration()
                 }
@@ -142,6 +157,12 @@ struct RulesSettingsView: View {
                 permissionRequiredView
             } else {
                 rulesListView
+            }
+
+            if let reloadError = appController.reloadError {
+                Label(reloadError, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundColor(.orange)
             }
 
             if let statusMessage {
@@ -162,6 +183,26 @@ struct RulesSettingsView: View {
                 .foregroundColor(.secondary)
         }
         .padding()
+        .sheet(item: $editorContext) { context in
+            RuleEditorView(
+                appController: appController,
+                draft: context.draft,
+                isEditing: context.isEditing
+            )
+        }
+        .confirmationDialog(
+            "Delete this rule?",
+            isPresented: Binding(
+                get: { ruleToDelete != nil },
+                set: { if !$0 { ruleToDelete = nil } }
+            ),
+            presenting: ruleToDelete
+        ) { rule in
+            Button("Delete", role: .destructive) { performDelete(rule) }
+            Button("Cancel", role: .cancel) { ruleToDelete = nil }
+        } message: { rule in
+            Text(rule.id)
+        }
     }
 
     private var permissionRequiredView: some View {
@@ -219,7 +260,9 @@ struct RulesSettingsView: View {
                 RuleRow(
                     rule: rule,
                     errors: appController.validationErrors[rule.id] ?? [],
-                    onToggle: { enabled in setRuleEnabled(rule, enabled: enabled) }
+                    onToggle: { enabled in setRuleEnabled(rule, enabled: enabled) },
+                    onEdit: { editorContext = EditorContext(draft: .make(from: rule), isEditing: true) },
+                    onDelete: { ruleToDelete = rule }
                 )
             }
         }
@@ -234,10 +277,17 @@ struct RulesSettingsView: View {
             Text("No rules yet")
                 .font(.headline)
 
-            Text("Add rules by editing the configuration file, then press Reload.")
+            Text("Press “Add Rule” to create one, or edit the configuration file directly.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
+
+            Button("Add Rule") {
+                editorContext = EditorContext(
+                    draft: .empty(kind: .basic, id: UUID().uuidString),
+                    isEditing: false
+                )
+            }
 
             Button("Open Configuration Folder") {
                 openConfigFolder()
@@ -256,6 +306,20 @@ struct RulesSettingsView: View {
             }
         } catch {
             saveError = "Failed to save: \(error.localizedDescription)"
+        }
+    }
+
+    private func performDelete(_ rule: Rule) {
+        ruleToDelete = nil
+        do {
+            try appController.deleteRule(id: rule.id)
+            saveError = nil
+            statusMessage = "Deleted"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                if statusMessage == "Deleted" { statusMessage = nil }
+            }
+        } catch {
+            saveError = "Failed to delete: \(error.localizedDescription)"
         }
     }
 
@@ -286,6 +350,8 @@ private struct RuleRow: View {
     let rule: Rule
     let errors: [String]
     let onToggle: (Bool) -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -304,6 +370,19 @@ private struct RuleRow: View {
                         .foregroundColor(.orange)
                         .help(errors.joined(separator: "\n"))
                 }
+
+                Button(action: onEdit) {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.borderless)
+                .help("Edit rule")
+
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.borderless)
+                .foregroundColor(.red)
+                .help("Delete rule")
             }
 
             if let description = ruleDescription, !description.isEmpty {
