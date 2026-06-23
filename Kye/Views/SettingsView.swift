@@ -213,7 +213,9 @@ struct RulesSettingsView: View {
             Text(title.uppercased())
                 .font(.caption2)
                 .foregroundColor(.secondary)
-            ForEach(rules) { rule in
+            // Key by position, not rule.id: duplicate ids are a detected error state
+            // (see duplicate-id validation) and would otherwise make ForEach undefined.
+            ForEach(Array(rules.enumerated()), id: \.offset) { _, rule in
                 RuleRow(
                     rule: rule,
                     errors: appController.validationErrors[rule.id] ?? [],
