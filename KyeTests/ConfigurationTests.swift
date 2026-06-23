@@ -69,7 +69,9 @@ final class ConfigurationTests: XCTestCase {
 
         XCTAssertEqual(config.version, "1.0")
         XCTAssertEqual(config.enabled, true)
-        XCTAssertTrue(config.rules.isEmpty)
+        // The default config ships with built-in mappings:
+        // Right Alt → Right Cmd, plus the vim-navigation (HJKL) layer.
+        XCTAssertEqual(config.rules.count, 2)
     }
 
     func testInvalidJSONThrowsDecodingError() {

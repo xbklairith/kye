@@ -50,7 +50,9 @@ final class ConfigurationManagerTests: XCTestCase {
 
         XCTAssertEqual(config.version, "1.0")
         XCTAssertTrue(config.enabled)
-        XCTAssertTrue(config.rules.isEmpty)
+        // When no config file exists, the default (with its 2 built-in rules)
+        // is created and persisted to disk.
+        XCTAssertEqual(config.rules.count, 2)
         XCTAssertTrue(FileManager.default.fileExists(atPath: configURL.path))
     }
 
