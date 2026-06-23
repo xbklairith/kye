@@ -121,3 +121,37 @@ struct LayerRule: Codable, Equatable {
         mappings = try container.decode([String: String].self, forKey: .mappings)
     }
 }
+
+/// Discriminates the two rule variants for grouping/display in the UI.
+enum RuleKind {
+    case basic
+    case layer
+}
+
+extension Rule: Identifiable {
+    /// Stable identity sourced from the underlying rule's `id` (used by SwiftUI `ForEach`).
+    var id: String {
+        switch self {
+        case .basic(let rule): return rule.id
+        case .layer(let rule): return rule.id
+        }
+    }
+
+    /// Which variant this rule is.
+    var kind: RuleKind {
+        switch self {
+        case .basic: return .basic
+        case .layer: return .layer
+        }
+    }
+
+    /// Returns a copy of the rule with its `enabled` flag set, preserving all other fields.
+    func withEnabled(_ enabled: Bool) -> Rule {
+        switch self {
+        case .basic(let rule):
+            return .basic(BasicRule(id: rule.id, description: rule.description, enabled: enabled, from: rule.from, to: rule.to))
+        case .layer(let rule):
+            return .layer(LayerRule(id: rule.id, description: rule.description, enabled: enabled, trigger: rule.trigger, mappings: rule.mappings))
+        }
+    }
+}
