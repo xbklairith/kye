@@ -55,6 +55,12 @@ final class AppControllerTests: XCTestCase {
         super.tearDown()
     }
 
+    /// A second `ConfigurationManager` over the same file, simulating an external editor whose
+    /// writes leave the app's in-memory config stale (so reloads see a real change).
+    private func makeExternalWriter() -> ConfigurationManager {
+        ConfigurationManager(configurationURL: configManager.configurationURL, keyMapper: keyMapper)
+    }
+
     // MARK: - Protocol Conformance
 
     func testConformsToAppControllingProtocol() {
@@ -285,7 +291,7 @@ final class AppControllerTests: XCTestCase {
         )
         // External writer changes the file so the in-memory config stays stale and
         // reloadConfiguration's content-diff sees a real change (not a self-write no-op).
-        let external = ConfigurationManager(configurationURL: configManager.configurationURL, keyMapper: keyMapper)
+        let external = makeExternalWriter()
         try external.save(invalidConfig)
 
         try appController.reloadConfiguration()
@@ -428,7 +434,7 @@ final class AppControllerTests: XCTestCase {
         ruleEngine.rules = []
 
         // External writer changes the file on disk.
-        let external = ConfigurationManager(configurationURL: configManager.configurationURL, keyMapper: keyMapper)
+        let external = makeExternalWriter()
         try external.save(Configuration(
             version: "1.0", enabled: true,
             rules: [.basic(BasicRule(id: "r2", description: nil, enabled: true, from: "c", to: "d"))]
@@ -582,7 +588,7 @@ final class AppControllerTests: XCTestCase {
         let recovered = Configuration(version: "1.0", enabled: true, rules: [
             .basic(BasicRule(id: "r2", description: "c→d", enabled: true, from: "c", to: "d"))
         ])
-        let writer = ConfigurationManager(configurationURL: configManager.configurationURL, keyMapper: keyMapper)
+        let writer = makeExternalWriter()
         try writer.save(recovered)
 
         appController.reloadFromDisk()
@@ -606,7 +612,7 @@ final class AppControllerTests: XCTestCase {
             .store(in: &cancellables)
 
         // An external editor writes a distinct config to the watched directory.
-        let external = ConfigurationManager(configurationURL: configManager.configurationURL, keyMapper: keyMapper)
+        let external = makeExternalWriter()
         try external.save(Configuration(version: "1.0", enabled: true, rules: [
             .basic(BasicRule(id: "external_rule", description: nil, enabled: true, from: "a", to: "b"))
         ]))
@@ -626,7 +632,7 @@ final class AppControllerTests: XCTestCase {
             .sink { _ in XCTFail("rules must not reload after stop()") }
             .store(in: &cancellables)
 
-        let external = ConfigurationManager(configurationURL: configManager.configurationURL, keyMapper: keyMapper)
+        let external = makeExternalWriter()
         try external.save(Configuration(version: "1.0", enabled: true, rules: [
             .basic(BasicRule(id: "post_stop", description: nil, enabled: true, from: "a", to: "b"))
         ]))
