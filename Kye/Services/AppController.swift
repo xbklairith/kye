@@ -195,7 +195,27 @@ final class AppController: AppControlling, ObservableObject {
         try applyRules(configManager.configuration.rules.filter { $0.id != id })
     }
 
+    /// Suspends the event tap during key capture so the captured key reflects the physical
+    /// key, not a remapped one. Tap-level only — never touches `state`/`isEnabled`, so the
+    /// menu-bar status stays steady (REQ-B07).
+    func suspendForCapture() {
+        guard !isCapturing else { return }
+        isCapturing = true
+        eventTapManager.setEnabled(false)
+    }
+
+    /// Restores the tap to its pre-capture state. Restores `isEnabled` (NOT unconditionally
+    /// `true`), so a globally-disabled tap stays disabled. Idempotent (REQ-B08).
+    func resumeAfterCapture() {
+        guard isCapturing else { return }
+        isCapturing = false
+        eventTapManager.setEnabled(isEnabled)
+    }
+
     // MARK: - Private
+
+    /// True while a key-capture has suspended the tap; guards resume idempotency.
+    private var isCapturing = false
 
     /// Builds a `Configuration` from a new rules array (preserving `version`/`enabled`) and applies it.
     private func applyRules(_ rules: [Rule]) throws {
