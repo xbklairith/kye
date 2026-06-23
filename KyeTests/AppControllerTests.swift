@@ -161,6 +161,21 @@ final class AppControllerTests: XCTestCase {
         }
     }
 
+    func testStartIsIdempotentAndDoesNotRevertRunningState() async throws {
+        mockPermissionManager.mockStatus = .granted
+        try await appController.start()
+        XCTAssertEqual(appController.state, .running)
+        XCTAssertEqual(mockEventTapManager.startCallCount, 1)
+
+        // A redundant start() fires (AppDelegate launch + menu .task + permission callback all
+        // call start). If AXIsProcessTrusted momentarily reads denied, it must NOT downgrade.
+        mockPermissionManager.mockStatus = .denied
+        try await appController.start()
+
+        XCTAssertEqual(appController.state, .running, "a redundant start must not revert a running app")
+        XCTAssertEqual(mockEventTapManager.startCallCount, 1, "the tap must not be restarted")
+    }
+
     // MARK: - Stop Tests
 
     func testStopStopsEventTap() async throws {
