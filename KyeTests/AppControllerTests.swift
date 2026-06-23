@@ -402,6 +402,40 @@ final class AppControllerTests: XCTestCase {
         XCTAssertFalse(reloadedR1.enabled, "toggled rule should be disabled on disk")
         XCTAssertTrue(reloadedR2.enabled, "other rule should be untouched on disk")
     }
+
+    // MARK: - reloadConfiguration content-diff
+
+    func testReloadConfigurationIsNoOpWhenContentUnchanged() throws {
+        let rule = BasicRule(id: "r1", description: nil, enabled: true, from: "a", to: "b")
+        try configManager.save(Configuration(version: "1.0", enabled: true, rules: [.basic(rule)]))
+
+        // Drift sentinel: if reload runs, it repopulates the engine from disk.
+        ruleEngine.rules = []
+
+        try appController.reloadConfiguration() // disk is identical to current config
+
+        XCTAssertTrue(ruleEngine.rules.isEmpty, "identical-content reload must be a no-op")
+    }
+
+    func testReloadConfigurationReloadsWhenContentChanged() throws {
+        try configManager.save(Configuration(
+            version: "1.0", enabled: true,
+            rules: [.basic(BasicRule(id: "r1", description: nil, enabled: true, from: "a", to: "b"))]
+        ))
+        ruleEngine.rules = []
+
+        // External writer changes the file on disk.
+        let external = ConfigurationManager(configurationURL: configManager.configurationURL, keyMapper: keyMapper)
+        try external.save(Configuration(
+            version: "1.0", enabled: true,
+            rules: [.basic(BasicRule(id: "r2", description: nil, enabled: true, from: "c", to: "d"))]
+        ))
+
+        try appController.reloadConfiguration()
+
+        XCTAssertEqual(ruleEngine.rules.count, 1)
+        XCTAssertEqual(ruleEngine.rules.first?.id, "r2", "changed content must reload the engine")
+    }
 }
 
 /// Test double that always fails on `save`, leaving its configuration unchanged.
