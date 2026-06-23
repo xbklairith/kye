@@ -15,7 +15,11 @@ A lightweight macOS **menu-bar keyboard remapper**. Kye intercepts key events wi
 ## Install
 
 1. Download `Kye-vX.Y.Z.zip` from the [latest release](https://github.com/xbklairith/kye/releases/latest), unzip it, and move **Kye.app** to `/Applications`.
-2. Launch it. The app is signed with an Apple Development certificate (not a Developer ID, not notarized), so Gatekeeper warns on first launch — **right-click the app → Open**, or allow it under **System Settings → Privacy & Security**.
+2. Launch it. The app is signed with an Apple Development certificate (not a Developer ID, not notarized), so on first launch Gatekeeper shows *"Apple could not verify 'Kye' is free of malware…"*. To open it anyway:
+   - **macOS Sonoma & Sequoia:** open **System Settings → Privacy & Security**, scroll to the Security section, and click **Open Anyway** next to the Kye message, then authenticate.
+   - **Or in Terminal:** `sudo xattr -dr com.apple.quarantine /Applications/Kye.app`, then launch normally.
+
+   This is expected for an unnotarized app; you only need to do it once.
 3. Grant **Accessibility** permission when prompted (**System Settings → Privacy & Security → Accessibility**). This is required for keyboard interception — without it, Kye can't remap keys.
 
 The menu-bar icon shows the current status. Use it to enable/disable remapping, reload the config, or open Settings.
