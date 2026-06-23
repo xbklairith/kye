@@ -484,3 +484,23 @@ final class RuleIdentityTests: XCTestCase {
         XCTAssertEqual(rules.map(\.id), ["x", "y"])
     }
 }
+
+final class GroupedRulesTests: XCTestCase {
+
+    func testGroupsBasicIntoRemapsAndLayerIntoLayersPreservingOrder() {
+        let b1 = Rule.basic(BasicRule(id: "b1", description: nil, enabled: true, from: "a", to: "b"))
+        let l1 = Rule.layer(LayerRule(id: "l1", description: nil, enabled: true, trigger: "right_command", mappings: ["h": "left_arrow"]))
+        let b2 = Rule.basic(BasicRule(id: "b2", description: nil, enabled: true, from: "c", to: "d"))
+
+        let grouped = RulesSettingsView.groupedRules([b1, l1, b2])
+
+        XCTAssertEqual(grouped.remaps.map(\.id), ["b1", "b2"])
+        XCTAssertEqual(grouped.layers.map(\.id), ["l1"])
+    }
+
+    func testEmptyInputYieldsEmptyGroups() {
+        let grouped = RulesSettingsView.groupedRules([])
+        XCTAssertTrue(grouped.remaps.isEmpty)
+        XCTAssertTrue(grouped.layers.isEmpty)
+    }
+}
