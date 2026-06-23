@@ -37,6 +37,7 @@
 		B1000012 /* LaunchAtLoginManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000012 /* LaunchAtLoginManagerTests.swift */; };
 		B1000013 /* IntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000013 /* IntegrationTests.swift */; };
 		B1000014 /* CGEventTestHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000014 /* CGEventTestHelper.swift */; };
+		B1000020 /* KeySymbolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000020 /* KeySymbolTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -84,6 +85,7 @@
 		B2000012 /* LaunchAtLoginManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManagerTests.swift; sourceTree = "<group>"; };
 		B2000013 /* IntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntegrationTests.swift; sourceTree = "<group>"; };
 		B2000014 /* CGEventTestHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CGEventTestHelper.swift; sourceTree = "<group>"; };
+		B2000020 /* KeySymbolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeySymbolTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -204,6 +206,7 @@
 				B2000011 /* AppControllerTests.swift */,
 				B2000012 /* LaunchAtLoginManagerTests.swift */,
 				B2000013 /* IntegrationTests.swift */,
+				B2000020 /* KeySymbolTests.swift */,
 			);
 			path = KyeTests;
 			sourceTree = "<group>";
@@ -351,6 +354,7 @@
 				B1000012 /* LaunchAtLoginManagerTests.swift in Sources */,
 				B1000013 /* IntegrationTests.swift in Sources */,
 				B1000014 /* CGEventTestHelper.swift in Sources */,
+				B1000020 /* KeySymbolTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
