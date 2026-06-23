@@ -27,6 +27,7 @@ final class PermissionManager: PermissionManaging {
     private let logger: Logging?
     private var pollingTimer: Timer?
     private let pollingInterval: TimeInterval
+    private var isMonitoring = false
 
     private(set) var status: PermissionStatus = .unknown {
         didSet {
@@ -72,7 +73,11 @@ final class PermissionManager: PermissionManaging {
     }
 
     func startMonitoring() {
-        guard pollingTimer == nil else { return }
+        // Use a synchronous flag rather than `pollingTimer`, which is only
+        // assigned inside the async block below — two rapid calls would both
+        // see a nil timer and start (and log) twice.
+        guard !isMonitoring else { return }
+        isMonitoring = true
 
         logger?.info("Starting permission monitoring", category: .permission)
 
@@ -93,6 +98,9 @@ final class PermissionManager: PermissionManaging {
     }
 
     func stopMonitoring() {
+        guard isMonitoring else { return }
+        isMonitoring = false
+
         DispatchQueue.main.async { [weak self] in
             self?.pollingTimer?.invalidate()
             self?.pollingTimer = nil

@@ -111,7 +111,30 @@ struct GeneralSettingsView: View {
 
 struct RulesSettingsView: View {
     @ObservedObject var appController: AppController
-    @State private var reloadMessage: String?
+    @State private var statusMessage: String?
+    @State private var saveError: String?
+    @State private var editorContext: EditorContext?
+    @State private var ruleToDelete: Rule?
+
+    /// Identifies an in-flight editor session for `.sheet(item:)`.
+    private struct EditorContext: Identifiable {
+        let id = UUID()
+        var draft: RuleDraft
+        var isEditing: Bool
+    }
+
+    /// Splits rules into basic remaps and layer rules, preserving original order.
+    static func groupedRules(_ rules: [Rule]) -> (remaps: [Rule], layers: [Rule]) {
+        var remaps: [Rule] = []
+        var layers: [Rule] = []
+        for rule in rules {
+            switch rule.kind {
+            case .basic: remaps.append(rule)
+            case .layer: layers.append(rule)
+            }
+        }
+        return (remaps, layers)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -119,6 +142,12 @@ struct RulesSettingsView: View {
                 Text("Active Rules")
                     .font(.headline)
                 Spacer()
+                Button("Add Rule") {
+                    editorContext = EditorContext(
+                        draft: .empty(kind: .basic, id: UUID().uuidString),
+                        isEditing: false
+                    )
+                }
                 Button("Reload") {
                     reloadConfiguration()
                 }
@@ -130,19 +159,50 @@ struct RulesSettingsView: View {
                 rulesListView
             }
 
-            if let message = reloadMessage {
-                Text(message)
+            if let reloadError = appController.reloadError {
+                Label(reloadError, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+            }
+
+            if let statusMessage {
+                Text(statusMessage)
                     .font(.caption)
                     .foregroundColor(.green)
+            }
+            if let saveError {
+                Text(saveError)
+                    .font(.caption)
+                    .foregroundColor(.red)
             }
 
             Spacer()
 
-            Text("Edit ~/.config/kye/config.json to modify rules")
+            Text("Rules are saved to ~/.config/kye/config.json")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
         .padding()
+        .sheet(item: $editorContext) { context in
+            RuleEditorView(
+                appController: appController,
+                draft: context.draft,
+                isEditing: context.isEditing
+            )
+        }
+        .confirmationDialog(
+            "Delete this rule?",
+            isPresented: Binding(
+                get: { ruleToDelete != nil },
+                set: { if !$0 { ruleToDelete = nil } }
+            ),
+            presenting: ruleToDelete
+        ) { rule in
+            Button("Delete", role: .destructive) { performDelete(rule) }
+            Button("Cancel", role: .cancel) { ruleToDelete = nil }
+        } message: { rule in
+            Text(rule.id)
+        }
     }
 
     private var permissionRequiredView: some View {
@@ -166,29 +226,221 @@ struct RulesSettingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    @ViewBuilder
     private var rulesListView: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 8) {
-                // This is a placeholder - actual implementation would read from ConfigurationManager
-                Text("Configuration loaded from ~/.config/kye/config.json")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+        if appController.rules.isEmpty {
+            emptyStateView
+        } else {
+            let grouped = Self.groupedRules(appController.rules)
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    if !grouped.remaps.isEmpty {
+                        ruleSection(title: "Remaps", rules: grouped.remaps)
+                    }
+                    if !grouped.layers.isEmpty {
+                        ruleSection(title: "Layers", rules: grouped.layers)
+                    }
+                }
+                .padding(8)
+            }
+            .frame(maxHeight: 190)
+            .background(Color(NSColor.textBackgroundColor))
+            .cornerRadius(8)
+        }
+    }
+
+    private func ruleSection(title: String, rules: [Rule]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            // Key by position, not rule.id: duplicate ids are a detected error state
+            // (see duplicate-id validation) and would otherwise make ForEach undefined.
+            ForEach(Array(rules.enumerated()), id: \.offset) { _, rule in
+                RuleRow(
+                    rule: rule,
+                    errors: appController.validationErrors[rule.id] ?? [],
+                    onToggle: { enabled in setRuleEnabled(rule, enabled: enabled) },
+                    onEdit: { editorContext = EditorContext(draft: .make(from: rule), isEditing: true) },
+                    onDelete: { ruleToDelete = rule }
+                )
             }
         }
-        .frame(maxHeight: 150)
-        .background(Color(NSColor.textBackgroundColor))
-        .cornerRadius(8)
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "list.bullet.rectangle")
+                .font(.system(size: 36))
+                .foregroundColor(.secondary)
+
+            Text("No rules yet")
+                .font(.headline)
+
+            Text("Press “Add Rule” to create one, or edit the configuration file directly.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+
+            Button("Add Rule") {
+                editorContext = EditorContext(
+                    draft: .empty(kind: .basic, id: UUID().uuidString),
+                    isEditing: false
+                )
+            }
+
+            Button("Open Configuration Folder") {
+                openConfigFolder()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func setRuleEnabled(_ rule: Rule, enabled: Bool) {
+        do {
+            try appController.setRuleEnabled(id: rule.id, enabled: enabled)
+            saveError = nil
+            statusMessage = "Saved"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                if statusMessage == "Saved" { statusMessage = nil }
+            }
+        } catch {
+            saveError = "Failed to save: \(error.localizedDescription)"
+        }
+    }
+
+    private func performDelete(_ rule: Rule) {
+        ruleToDelete = nil
+        do {
+            try appController.deleteRule(id: rule.id)
+            saveError = nil
+            statusMessage = "Deleted"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                if statusMessage == "Deleted" { statusMessage = nil }
+            }
+        } catch {
+            saveError = "Failed to delete: \(error.localizedDescription)"
+        }
+    }
+
+    private func openConfigFolder() {
+        let configPath = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".config")
+            .appendingPathComponent("kye")
+        try? FileManager.default.createDirectory(at: configPath, withIntermediateDirectories: true)
+        NSWorkspace.shared.open(configPath)
     }
 
     private func reloadConfiguration() {
         do {
             try appController.reloadConfiguration()
-            reloadMessage = "Configuration reloaded successfully"
+            saveError = nil
+            statusMessage = "Configuration reloaded successfully"
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                reloadMessage = nil
+                statusMessage = nil
             }
         } catch {
-            reloadMessage = "Failed to reload: \(error.localizedDescription)"
+            saveError = "Failed to reload: \(error.localizedDescription)"
+        }
+    }
+}
+
+/// A single rule row: enable toggle, source→target glyphs, description, and an error badge.
+private struct RuleRow: View {
+    let rule: Rule
+    let errors: [String]
+    let onToggle: (Bool) -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 8) {
+                Toggle("", isOn: Binding(get: { isEnabled }, set: { onToggle($0) }))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+
+                mappingSummary
+                    .font(.system(.body, design: .rounded))
+
+                Spacer()
+
+                if !errors.isEmpty {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                        .help(errors.joined(separator: "\n"))
+                }
+
+                if RuleDraft.isInlineEditable(rule) {
+                    Button(action: onEdit) {
+                        Image(systemName: "pencil")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Edit rule")
+                } else {
+                    Image(systemName: "pencil.slash")
+                        .foregroundColor(.secondary)
+                        .help("Multi-key layers are edited in the config file")
+                }
+
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.borderless)
+                .foregroundColor(.red)
+                .help("Delete rule")
+            }
+
+            if let description = ruleDescription, !description.isEmpty {
+                Text(description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            if !errors.isEmpty {
+                Text(errors.joined(separator: " • "))
+                    .font(.caption2)
+                    .foregroundColor(.orange)
+            }
+        }
+        .opacity(isEnabled ? 1.0 : 0.55)
+    }
+
+    private var isEnabled: Bool {
+        switch rule {
+        case .basic(let r): return r.enabled
+        case .layer(let r): return r.enabled
+        }
+    }
+
+    private var ruleDescription: String? {
+        switch rule {
+        case .basic(let r): return r.description
+        case .layer(let r): return r.description
+        }
+    }
+
+    @ViewBuilder
+    private var mappingSummary: some View {
+        switch rule {
+        case .basic(let r):
+            HStack(spacing: 4) {
+                Text(KeySymbol.glyph(for: r.from))
+                Image(systemName: "arrow.right")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Text(KeySymbol.glyph(for: r.to))
+            }
+        case .layer(let r):
+            HStack(spacing: 4) {
+                Text(KeySymbol.glyph(for: r.trigger))
+                Text("layer")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Text("· \(r.mappings.count) keys")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
         }
     }
 }

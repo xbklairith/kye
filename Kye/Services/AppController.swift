@@ -28,6 +28,16 @@ final class AppController: AppControlling, ObservableObject {
 
     @Published private(set) var state: AppState = .initializing
 
+    /// The current rules, published for the rules UI. Mirrors the active configuration.
+    @Published private(set) var rules: [Rule] = []
+
+    /// Validation messages keyed by rule id, published for inline display in the rules UI.
+    @Published private(set) var validationErrors: [String: [String]] = [:]
+
+    /// Non-nil when the on-disk config failed to parse on auto-reload; the last-good rules
+    /// stay active and this drives a banner. Cleared on the next successful reload (REQ-B12).
+    @Published private(set) var reloadError: String?
+
     var statePublisher: AnyPublisher<AppState, Never> {
         $state.eraseToAnyPublisher()
     }
@@ -60,6 +70,15 @@ final class AppController: AppControlling, ObservableObject {
     }
 
     func start() async throws {
+        // Idempotent: start() is invoked from several places (app launch, menu appearance, and
+        // the permission-granted callback). Once running, a redundant call must not re-check
+        // permission and clobber the state — a transient AXIsProcessTrusted() read of `denied`
+        // would otherwise revert a working app to `.waitingForPermission`.
+        guard state != .running else {
+            logger?.info("Start requested while already running; ignoring", category: .app)
+            return
+        }
+
         logger?.info("Starting Kye app controller", category: .app)
         debugLog("START: Beginning app controller startup")
 
@@ -86,8 +105,9 @@ final class AppController: AppControlling, ObservableObject {
                 }
             }
 
-            // Load valid rules into engine
+            // Load all rules into the engine (invalid rules stay inert at evaluation time)
             loadRulesIntoEngine(config)
+            republish()
 
         } catch {
             logger?.error("Failed to load configuration: \(error)", category: .configuration)
@@ -101,6 +121,7 @@ final class AppController: AppControlling, ObservableObject {
             try eventTapManager.start()
             isEnabled = true
             state = .running
+            startWatchingConfig()
             logger?.info("Kye is now active", category: .app)
             debugLog("Event tap started successfully! isEnabled=\(isEnabled)")
         } catch {
@@ -113,10 +134,28 @@ final class AppController: AppControlling, ObservableObject {
     func stop() {
         logger?.info("Stopping Kye app controller", category: .app)
 
+        stopWatchingConfig()
         eventTapManager.stop()
         permissionManager.stopMonitoring()
         isEnabled = false
         state = .disabled
+    }
+
+    /// Begins watching the config directory so external edits auto-reload. Our own atomic
+    /// writes are filtered out by the content-diff guard in `reloadConfiguration` (REQ-B17).
+    private func startWatchingConfig() {
+        guard configWatcher == nil else { return }
+        let directory = configManager.configurationURL.deletingLastPathComponent()
+        let watcher = ConfigFileWatcher(directory: directory) { [weak self] in
+            self?.reloadFromDisk()
+        }
+        watcher.start()
+        configWatcher = watcher
+    }
+
+    private func stopWatchingConfig() {
+        configWatcher?.stop()
+        configWatcher = nil
     }
 
     func toggleEnabled() {
@@ -136,9 +175,17 @@ final class AppController: AppControlling, ObservableObject {
     func reloadConfiguration() throws {
         logger?.info("Reloading configuration", category: .configuration)
 
+        // Snapshot before reload overwrites configuration in place, so identical
+        // content (e.g. our own atomic write) is a no-op — preventing reload loops.
+        let before = configManager.configuration
         try configManager.reload()
-
         let config = configManager.configuration
+
+        guard before != config else {
+            logger?.info("Configuration unchanged on reload; skipping", category: .configuration)
+            return
+        }
+
         let errors = configManager.validate(config, keyMapper: keyMapper)
         if !errors.isEmpty {
             for error in errors {
@@ -147,10 +194,102 @@ final class AppController: AppControlling, ObservableObject {
         }
 
         loadRulesIntoEngine(config)
+        republish()
         logger?.info("Configuration reloaded, \(config.rules.count) rules active", category: .configuration)
     }
 
+    /// Watcher-facing reload: never throws. On a parse failure the last-good engine rules are
+    /// kept untouched and `reloadError` is set for the banner; a successful reload clears it.
+    func reloadFromDisk() {
+        do {
+            try reloadConfiguration()
+            reloadError = nil
+        } catch {
+            let message = "Couldn't load \(configManager.configurationURL.lastPathComponent): \(error.localizedDescription)"
+            logger?.error("Auto-reload failed; keeping last-good config: \(message)", category: .configuration)
+            reloadError = message
+        }
+    }
+
+    /// Toggles a rule's enabled flag, persists it, reloads the engine, and republishes derived state.
+    /// If saving fails the error is rethrown and no in-memory state is mutated.
+    func setRuleEnabled(id: String, enabled: Bool) throws {
+        let current = configManager.configuration
+        var updatedRules = current.rules
+        guard let index = updatedRules.firstIndex(where: { $0.id == id }) else { return }
+
+        updatedRules[index] = updatedRules[index].withEnabled(enabled)
+        try applyRules(updatedRules)
+    }
+
+    /// Appends a rule, persists, reloads the engine, and republishes. Non-mutating on save failure.
+    func addRule(_ rule: Rule) throws {
+        try applyRules(configManager.configuration.rules + [rule])
+    }
+
+    /// Replaces the rule whose `id` matches, preserving order. No-op if the id is absent.
+    func updateRule(_ rule: Rule) throws {
+        var rules = configManager.configuration.rules
+        guard let index = rules.firstIndex(where: { $0.id == rule.id }) else { return }
+        rules[index] = rule
+        try applyRules(rules)
+    }
+
+    /// Removes the rule with the given `id`, persists, reloads the engine, and republishes.
+    func deleteRule(id: String) throws {
+        try applyRules(configManager.configuration.rules.filter { $0.id != id })
+    }
+
+    /// Suspends the event tap during key capture so the captured key reflects the physical
+    /// key, not a remapped one. Tap-level only — never touches `state`/`isEnabled`, so the
+    /// menu-bar status stays steady (REQ-B07).
+    func suspendForCapture() {
+        guard !isCapturing else { return }
+        isCapturing = true
+        eventTapManager.setEnabled(false)
+    }
+
+    /// Restores the tap to its pre-capture state. Restores `isEnabled` (NOT unconditionally
+    /// `true`), so a globally-disabled tap stays disabled. Idempotent (REQ-B08).
+    func resumeAfterCapture() {
+        guard isCapturing else { return }
+        isCapturing = false
+        eventTapManager.setEnabled(isEnabled)
+    }
+
     // MARK: - Private
+
+    /// True while a key-capture has suspended the tap; guards resume idempotency.
+    private var isCapturing = false
+
+    /// Watches the config directory for external edits while the app is running.
+    private var configWatcher: ConfigFileWatcher?
+
+    /// Builds a `Configuration` from a new rules array (preserving `version`/`enabled`) and applies it.
+    private func applyRules(_ rules: [Rule]) throws {
+        let current = configManager.configuration
+        try saveAndApply(Configuration(version: current.version, enabled: current.enabled, rules: rules))
+    }
+
+    /// Persists a configuration, then reloads the engine and republishes derived state.
+    /// Save runs first so a failure leaves the engine and published state untouched.
+    private func saveAndApply(_ configuration: Configuration) throws {
+        try configManager.save(configuration)
+        loadRulesIntoEngine(configuration)
+        republish()
+    }
+
+    /// Recomputes published `rules` and `validationErrors` from the active configuration.
+    private func republish() {
+        let config = configManager.configuration
+        rules = config.rules
+
+        var grouped: [String: [String]] = [:]
+        for error in configManager.validate(config, keyMapper: keyMapper) {
+            grouped[error.ruleId, default: []].append(error.message)
+        }
+        validationErrors = grouped
+    }
 
     private func setupCallbacks() {
         // Permission status changes

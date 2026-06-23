@@ -69,7 +69,9 @@ final class ConfigurationTests: XCTestCase {
 
         XCTAssertEqual(config.version, "1.0")
         XCTAssertEqual(config.enabled, true)
-        XCTAssertTrue(config.rules.isEmpty)
+        // The default config ships with built-in mappings:
+        // Right Alt → Right Cmd, plus the vim-navigation (HJKL) layer.
+        XCTAssertEqual(config.rules.count, 2)
     }
 
     func testInvalidJSONThrowsDecodingError() {
@@ -433,5 +435,72 @@ final class RuleTypeDiscriminationTests: XCTestCase {
         XCTAssertEqual(decodedConfig.version, originalConfig.version)
         XCTAssertEqual(decodedConfig.enabled, originalConfig.enabled)
         XCTAssertEqual(decodedConfig.rules.count, originalConfig.rules.count)
+    }
+}
+
+final class RuleIdentityTests: XCTestCase {
+
+    private func basic(_ id: String = "b1", enabled: Bool = true) -> Rule {
+        .basic(BasicRule(id: id, description: "d", enabled: enabled, from: "a", to: "b"))
+    }
+
+    private func layer(_ id: String = "l1", enabled: Bool = true) -> Rule {
+        .layer(LayerRule(id: id, description: "d", enabled: enabled, trigger: "right_command", mappings: ["h": "left_arrow"]))
+    }
+
+    func testIdReturnsInnerId() {
+        XCTAssertEqual(basic("b1").id, "b1")
+        XCTAssertEqual(layer("l1").id, "l1")
+    }
+
+    func testKindDiscriminates() {
+        XCTAssertEqual(basic().kind, .basic)
+        XCTAssertEqual(layer().kind, .layer)
+    }
+
+    func testWithEnabledFlipsAndPreservesBasicFields() {
+        guard case .basic(let br) = basic("b1", enabled: true).withEnabled(false) else {
+            return XCTFail("expected basic")
+        }
+        XCTAssertFalse(br.enabled)
+        XCTAssertEqual(br.id, "b1")
+        XCTAssertEqual(br.from, "a")
+        XCTAssertEqual(br.to, "b")
+        XCTAssertEqual(br.description, "d")
+    }
+
+    func testWithEnabledFlipsAndPreservesLayerFields() {
+        guard case .layer(let lr) = layer("l1", enabled: false).withEnabled(true) else {
+            return XCTFail("expected layer")
+        }
+        XCTAssertTrue(lr.enabled)
+        XCTAssertEqual(lr.id, "l1")
+        XCTAssertEqual(lr.trigger, "right_command")
+        XCTAssertEqual(lr.mappings, ["h": "left_arrow"])
+    }
+
+    func testIdentifiableUsableInForEach() {
+        let rules: [Rule] = [basic("x"), layer("y")]
+        XCTAssertEqual(rules.map(\.id), ["x", "y"])
+    }
+}
+
+final class GroupedRulesTests: XCTestCase {
+
+    func testGroupsBasicIntoRemapsAndLayerIntoLayersPreservingOrder() {
+        let b1 = Rule.basic(BasicRule(id: "b1", description: nil, enabled: true, from: "a", to: "b"))
+        let l1 = Rule.layer(LayerRule(id: "l1", description: nil, enabled: true, trigger: "right_command", mappings: ["h": "left_arrow"]))
+        let b2 = Rule.basic(BasicRule(id: "b2", description: nil, enabled: true, from: "c", to: "d"))
+
+        let grouped = RulesSettingsView.groupedRules([b1, l1, b2])
+
+        XCTAssertEqual(grouped.remaps.map(\.id), ["b1", "b2"])
+        XCTAssertEqual(grouped.layers.map(\.id), ["l1"])
+    }
+
+    func testEmptyInputYieldsEmptyGroups() {
+        let grouped = RulesSettingsView.groupedRules([])
+        XCTAssertTrue(grouped.remaps.isEmpty)
+        XCTAssertTrue(grouped.layers.isEmpty)
     }
 }

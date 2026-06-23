@@ -29,10 +29,15 @@ struct MenuBarContentView: View {
             Divider()
 
             // Settings
-            Button("Settings...") {
-                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            if #available(macOS 14.0, *) {
+                SettingsMenuButton()
+            } else {
+                Button("Settings...") {
+                    NSApp.activate(ignoringOtherApps: true)
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                }
+                .keyboardShortcut(",", modifiers: .command)
             }
-            .keyboardShortcut(",", modifiers: .command)
 
             Divider()
 
@@ -119,6 +124,22 @@ struct MenuBarContentView: View {
         case .initializing:
             return "Initializing services"
         }
+    }
+}
+
+/// macOS 14+ "Settings…" menu item. The legacy `showSettingsWindow:` responder action no
+/// longer opens the Settings scene from a menu-style `MenuBarExtra`, so use the dedicated
+/// `openSettings` action and activate the app so the window comes to the front (accessory app).
+@available(macOS 14.0, *)
+private struct SettingsMenuButton: View {
+    @Environment(\.openSettings) private var openSettings
+
+    var body: some View {
+        Button("Settings...") {
+            NSApp.activate(ignoringOtherApps: true)
+            openSettings()
+        }
+        .keyboardShortcut(",", modifiers: .command)
     }
 }
 

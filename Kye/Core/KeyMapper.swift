@@ -110,4 +110,9 @@ final class KeyMapper: KeyMapping {
     func keyName(for code: CGKeyCode) -> String? {
         codeToName[code]
     }
+
+    /// All known key names, sorted — used to populate the rule editor's key picker.
+    var allKeyNames: [String] {
+        nameToCode.keys.sorted()
+    }
 }
