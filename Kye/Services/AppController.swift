@@ -34,6 +34,10 @@ final class AppController: AppControlling, ObservableObject {
     /// Validation messages keyed by rule id, published for inline display in the rules UI.
     @Published private(set) var validationErrors: [String: [String]] = [:]
 
+    /// Non-nil when the on-disk config failed to parse on auto-reload; the last-good rules
+    /// stay active and this drives a banner. Cleared on the next successful reload (REQ-B12).
+    @Published private(set) var reloadError: String?
+
     var statePublisher: AnyPublisher<AppState, Never> {
         $state.eraseToAnyPublisher()
     }
@@ -164,6 +168,19 @@ final class AppController: AppControlling, ObservableObject {
         loadRulesIntoEngine(config)
         republish()
         logger?.info("Configuration reloaded, \(config.rules.count) rules active", category: .configuration)
+    }
+
+    /// Watcher-facing reload: never throws. On a parse failure the last-good engine rules are
+    /// kept untouched and `reloadError` is set for the banner; a successful reload clears it.
+    func reloadFromDisk() {
+        do {
+            try reloadConfiguration()
+            reloadError = nil
+        } catch {
+            let message = "Couldn't load \(configManager.configurationURL.lastPathComponent): \(error.localizedDescription)"
+            logger?.error("Auto-reload failed; keeping last-good config: \(message)", category: .configuration)
+            reloadError = message
+        }
     }
 
     /// Toggles a rule's enabled flag, persists it, reloads the engine, and republishes derived state.

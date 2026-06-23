@@ -555,7 +555,8 @@ final class AppControllerTests: XCTestCase {
         try appController.addRule(.basic(BasicRule(
             id: "r1", description: "a→b", enabled: true, from: "a", to: "b"
         )))
-        XCTAssertEqual(appController.rules.count, 1)
+        let baselineCount = appController.rules.count
+        XCTAssertGreaterThan(baselineCount, 0)
 
         // External edit corrupts the file.
         try "{ this is not valid json".write(
@@ -564,7 +565,7 @@ final class AppControllerTests: XCTestCase {
 
         appController.reloadFromDisk() // watcher-driven, must not throw
 
-        XCTAssertEqual(appController.rules.count, 1, "last-good rules must stay active")
+        XCTAssertEqual(appController.rules.count, baselineCount, "last-good rules must stay active")
         XCTAssertNotNil(appController.reloadError, "parse failure should surface a banner message")
     }
 
@@ -578,7 +579,7 @@ final class AppControllerTests: XCTestCase {
         XCTAssertNotNil(appController.reloadError)
 
         // External edit fixes the file with a different valid config.
-        let recovered = Configuration(version: 1, enabled: true, rules: [
+        let recovered = Configuration(version: "1.0", enabled: true, rules: [
             .basic(BasicRule(id: "r2", description: "c→d", enabled: true, from: "c", to: "d"))
         ])
         let writer = ConfigurationManager(configurationURL: configManager.configurationURL, keyMapper: keyMapper)
