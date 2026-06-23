@@ -109,4 +109,4 @@ KyeTests/     Unit + integration tests
 
 ## License
 
-No license has been chosen yet; all rights reserved by default. Open an issue if you'd like to use the code.
+Released under the [MIT License](LICENSE) — free to use, modify, and distribute.
