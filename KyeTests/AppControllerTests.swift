@@ -323,4 +323,77 @@ final class AppControllerTests: XCTestCase {
         XCTAssertEqual(AppState.error("test"), AppState.error("test"))
         XCTAssertNotEqual(AppState.running, AppState.disabled)
     }
+
+    // MARK: - setRuleEnabled / Published Rules
+
+    func testSetRuleEnabledPersistsFlipsEngineAndRepublishes() throws {
+        let rule = BasicRule(id: "r1", description: "test", enabled: true, from: "a", to: "b")
+        try configManager.save(Configuration(version: "1.0", enabled: true, rules: [.basic(rule)]))
+
+        try appController.setRuleEnabled(id: "r1", enabled: false)
+
+        // Persisted to the manager
+        guard case .basic(let saved) = configManager.configuration.rules.first else {
+            return XCTFail("expected a basic rule")
+        }
+        XCTAssertFalse(saved.enabled, "saved rule should be disabled")
+
+        // Engine reflects the change
+        guard case .basic(let engineRule) = ruleEngine.rules.first else {
+            return XCTFail("expected a basic rule in engine")
+        }
+        XCTAssertFalse(engineRule.enabled, "engine rule should be disabled")
+
+        // Published rules mirror persisted config
+        XCTAssertEqual(appController.rules, configManager.configuration.rules)
+        XCTAssertEqual(appController.rules.first?.id, "r1")
+    }
+
+    func testSetRuleEnabledPublishesValidationErrors() throws {
+        let bad = BasicRule(id: "bad", description: nil, enabled: true, from: "a", to: "nonexistent")
+        try configManager.save(Configuration(version: "1.0", enabled: true, rules: [.basic(bad)]))
+
+        try appController.setRuleEnabled(id: "bad", enabled: false)
+
+        XCTAssertEqual(appController.validationErrors["bad"]?.isEmpty, false,
+                       "invalid rule should surface a validation error keyed by id")
+    }
+
+    func testSetRuleEnabledRethrowsAndLeavesStateUnchangedWhenSaveFails() throws {
+        let engine = RuleEngine(keyMapper: keyMapper, modifierHandler: ModifierHandler())
+        let seed = Configuration(
+            version: "1.0",
+            enabled: true,
+            rules: [.basic(BasicRule(id: "r1", description: nil, enabled: true, from: "a", to: "b"))]
+        )
+        let throwing = ThrowingOnSaveConfigManager(configuration: seed)
+        let controller = AppController(
+            permissionManager: MockPermissionManager(),
+            configManager: throwing,
+            eventTapManager: MockEventTapManager(),
+            ruleEngine: engine,
+            keyMapper: keyMapper,
+            logger: mockLogger
+        )
+
+        XCTAssertThrowsError(try controller.setRuleEnabled(id: "r1", enabled: false))
+
+        XCTAssertTrue(controller.rules.isEmpty, "rules must not republish when save fails")
+        XCTAssertTrue(engine.rules.isEmpty, "engine must be untouched when save fails")
+    }
+}
+
+/// Test double that always fails on `save`, leaving its configuration unchanged.
+private final class ThrowingOnSaveConfigManager: ConfigurationManaging {
+    private(set) var configuration: Configuration
+    let configurationURL = URL(fileURLWithPath: "/tmp/kye-throwing-test.json")
+
+    init(configuration: Configuration) {
+        self.configuration = configuration
+    }
+
+    func load() throws -> Configuration { configuration }
+    func save(_ configuration: Configuration) throws { throw AppError.configurationInaccessible }
+    func validate(_ configuration: Configuration, keyMapper: KeyMapping) -> [ConfigurationError] { [] }
+    func reload() throws {}
 }
