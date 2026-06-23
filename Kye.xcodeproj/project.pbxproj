@@ -31,6 +31,7 @@
 		A1000015 /* AppController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000017 /* AppController.swift */; };
 		A1000016 /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000018 /* LaunchAtLoginManager.swift */; };
 		A1000020 /* KeySymbol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000020 /* KeySymbol.swift */; };
+		A1000021 /* KeyCaptureController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000021 /* KeyCaptureController.swift */; };
 		B1000008 /* LoggerServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000008 /* LoggerServiceTests.swift */; };
 		B1000009 /* ConfigurationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000009 /* ConfigurationManagerTests.swift */; };
 		B1000010 /* PermissionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000010 /* PermissionManagerTests.swift */; };
@@ -67,6 +68,7 @@
 		A2000012 /* RuleEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleEngine.swift; sourceTree = "<group>"; };
 		A2000013 /* EventTapManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTapManager.swift; sourceTree = "<group>"; };
 		A2000020 /* KeySymbol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeySymbol.swift; sourceTree = "<group>"; };
+		A2000021 /* KeyCaptureController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyCaptureController.swift; sourceTree = "<group>"; };
 		A3000001 /* Kye.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Kye.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B2000001 /* KyeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KyeTests.swift; sourceTree = "<group>"; };
 		B2000002 /* ConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationTests.swift; sourceTree = "<group>"; };
@@ -160,6 +162,7 @@
 				A2000012 /* RuleEngine.swift */,
 				A2000013 /* EventTapManager.swift */,
 				A2000020 /* KeySymbol.swift */,
+				A2000021 /* KeyCaptureController.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -340,6 +343,7 @@
 				A1000015 /* AppController.swift in Sources */,
 				A1000016 /* LaunchAtLoginManager.swift in Sources */,
 				A1000020 /* KeySymbol.swift in Sources */,
+				A1000021 /* KeyCaptureController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
