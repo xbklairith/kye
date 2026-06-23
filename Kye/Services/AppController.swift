@@ -28,6 +28,12 @@ final class AppController: AppControlling, ObservableObject {
 
     @Published private(set) var state: AppState = .initializing
 
+    /// The current rules, published for the rules UI. Mirrors the active configuration.
+    @Published private(set) var rules: [Rule] = []
+
+    /// Validation messages keyed by rule id, published for inline display in the rules UI.
+    @Published private(set) var validationErrors: [String: [String]] = [:]
+
     var statePublisher: AnyPublisher<AppState, Never> {
         $state.eraseToAnyPublisher()
     }
@@ -86,8 +92,9 @@ final class AppController: AppControlling, ObservableObject {
                 }
             }
 
-            // Load valid rules into engine
+            // Load all rules into the engine (invalid rules stay inert at evaluation time)
             loadRulesIntoEngine(config)
+            republish()
 
         } catch {
             logger?.error("Failed to load configuration: \(error)", category: .configuration)
@@ -147,10 +154,44 @@ final class AppController: AppControlling, ObservableObject {
         }
 
         loadRulesIntoEngine(config)
+        republish()
         logger?.info("Configuration reloaded, \(config.rules.count) rules active", category: .configuration)
     }
 
+    /// Toggles a rule's enabled flag, persists it, reloads the engine, and republishes derived state.
+    /// If saving fails the error is rethrown and no in-memory state is mutated.
+    func setRuleEnabled(id: String, enabled: Bool) throws {
+        let current = configManager.configuration
+        var updatedRules = current.rules
+        guard let index = updatedRules.firstIndex(where: { $0.id == id }) else { return }
+
+        updatedRules[index] = updatedRules[index].withEnabled(enabled)
+        let updated = Configuration(version: current.version, enabled: current.enabled, rules: updatedRules)
+
+        try saveAndApply(updated)
+    }
+
     // MARK: - Private
+
+    /// Persists a configuration, then reloads the engine and republishes derived state.
+    /// Save runs first so a failure leaves the engine and published state untouched.
+    private func saveAndApply(_ configuration: Configuration) throws {
+        try configManager.save(configuration)
+        loadRulesIntoEngine(configuration)
+        republish()
+    }
+
+    /// Recomputes published `rules` and `validationErrors` from the active configuration.
+    private func republish() {
+        let config = configManager.configuration
+        rules = config.rules
+
+        var grouped: [String: [String]] = [:]
+        for error in configManager.validate(config, keyMapper: keyMapper) {
+            grouped[error.ruleId, default: []].append(error.message)
+        }
+        validationErrors = grouped
+    }
 
     private func setupCallbacks() {
         // Permission status changes
