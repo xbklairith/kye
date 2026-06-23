@@ -119,6 +119,27 @@ final class ConfigurationManager: ConfigurationManaging {
             }
         }
 
+        errors.append(contentsOf: duplicateIdErrors(in: configuration.rules))
+
+        return errors
+    }
+
+    /// Detects rule ids that appear more than once, emitting one error per duplicated id.
+    private func duplicateIdErrors(in rules: [Rule]) -> [ConfigurationError] {
+        var seen = Set<String>()
+        var reported = Set<String>()
+        var errors: [ConfigurationError] = []
+        for rule in rules {
+            let id = rule.id
+            if seen.contains(id), !reported.contains(id) {
+                reported.insert(id)
+                errors.append(ConfigurationError(
+                    ruleId: id,
+                    message: "Duplicate rule id '\(id)': rule ids must be unique."
+                ))
+            }
+            seen.insert(id)
+        }
         return errors
     }
 
